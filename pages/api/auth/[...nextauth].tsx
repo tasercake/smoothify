@@ -11,8 +11,8 @@ const nextAuthHandler = NextAuth({
   providers: [
     Providers.Spotify({
       clientId: SPOTIFY_CLIENT_ID,
-      clientSecret: SPOTIFY_CLIENT_SECRET
-      // scope: SPOTIFY_AUTH_SCOPES
+      clientSecret: SPOTIFY_CLIENT_SECRET,
+      scope: SPOTIFY_AUTH_SCOPES
     })
   ]
 })
