@@ -1,13 +1,13 @@
-import "../styles/globals.css";
-import { AppProps } from "next/app";
+import '../styles/globals.css'
+import { AppProps } from 'next/app'
+import { SpotifyAuthProvider } from '../lib/SpotifyAuth'
 
 const App = ({ Component, pageProps }: AppProps) => {
   return (
-    <>
-      {/* Context Providers and stuff go here */}
+    <SpotifyAuthProvider>
       <Component {...pageProps} />
-    </>
-  );
-};
+    </SpotifyAuthProvider>
+  )
+}
 
-export default App;
+export default App
