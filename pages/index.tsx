@@ -1,17 +1,7 @@
 import Head from "next/head";
-import Link from "next/link";
-import Date from "../components/date";
 import { GetStaticProps } from "next";
 
-export default function Home({
-  allPostsData,
-}: {
-  allPostsData: {
-    date: string;
-    title: string;
-    id: string;
-  }[];
-}) {
+const Home = () => {
   return (
     <div>
       <Head>
@@ -26,26 +16,15 @@ export default function Home({
       </section>
       <section>
         <h2>Blog</h2>
-        <ul>
-          {allPostsData.map(({ id, date, title }) => (
-            <li key={id}>
-              <Link href={`/posts/${id}`}>
-                <a>{title}</a>
-              </Link>
-              <br />
-              <small>
-                <Date dateString={date} />
-              </small>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   );
-}
+};
 
 export const getStaticProps: GetStaticProps = async () => {
   return {
     props: {},
   };
 };
+
+export default Home;
