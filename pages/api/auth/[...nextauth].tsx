@@ -14,7 +14,20 @@ const nextAuthHandler = NextAuth({
       clientSecret: SPOTIFY_CLIENT_SECRET,
       scope: SPOTIFY_AUTH_SCOPES
     })
-  ]
+  ],
+  callbacks: {
+    jwt: async function jwt(token, user) {
+      if (user) {
+        token = { accessToken: user.accessToken }
+      }
+      return token
+    },
+    session: async function session(session, token) {
+      session.accessToken = token.accessToken
+      return session
+    }
+  },
+  secret: 'H0DUIJz74dZ2Mo2scXfTs146slYpLV1jcscUVo0NcohbFubKpdSBn0tHn46GLzDi'
 })
 
 export default nextAuthHandler

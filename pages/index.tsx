@@ -1,22 +1,22 @@
 import Head from 'next/head'
-import { GetStaticProps } from 'next'
 import { useSession, signIn, signOut } from 'next-auth/client'
+import SpotifyAnalysis from '../components/SpotifyAnalysis'
 import { BASE_URL } from '../lib/constants'
 
 const Home = () => {
-  const [session, loading] = useSession()
+  const [session, loadingSession] = useSession()
 
   return (
     <div>
       <Head>
-        <title>Title!</title>
+        <title>Smoothify</title>
       </Head>
       <section>
         {session ? (
           <>
-            <p>You&apos;re signed in! </p>
+            <p>You&apos;re signed in!</p>
             <p>Name: {session.user?.name}</p>
-            <p>Email: {session.user?.email}</p>
+            <SpotifyAnalysis />
             <button onClick={() => signOut({ callbackUrl: BASE_URL })}>
               Sign out
             </button>
@@ -25,17 +25,10 @@ const Home = () => {
           <button onClick={() => signIn('spotify')}>
             Sign in with Spotify
           </button>
-          // <a href="/api/auth/signin">Sign in with Spotify</a>
         )}
       </section>
     </div>
   )
-}
-
-export const getStaticProps: GetStaticProps = async () => {
-  return {
-    props: {}
-  }
 }
 
 export default Home
