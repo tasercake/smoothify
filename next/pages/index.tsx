@@ -1,7 +1,14 @@
 import Head from 'next/head'
 import { useSession, signIn, signOut } from 'next-auth/client'
 import SpotifyAnalysis from '../components/SpotifyAnalysis'
-import { BASE_URL } from '../lib/constants'
+import { BASE_URL, SPOTIFY_CLIENT_ID } from '../lib/constants'
+import ClientOAuth2 from 'client-oauth2'
+
+const spotifyAuth = new ClientOAuth2({
+  clientId: SPOTIFY_CLIENT_ID,
+
+  accessTokenUri
+})
 
 const Home = () => {
   const [session, loadingSession] = useSession()

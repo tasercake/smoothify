@@ -1,5 +1,4 @@
-import { signOut, useSession } from 'next-auth/client'
-import { BASE_URL } from '../lib/constants'
+import { useSession } from 'next-auth/client'
 import { useState } from 'react'
 import useSWR from 'swr'
 import spotifyClient from '../lib/spotifyClient'
@@ -39,23 +38,25 @@ interface TrackSearchResponse {
 }
 
 const spotifySearchFetcher = async (
-  params: SpotifySearchParams
+  params: SpotifySearchParams,
+  accessToken: string
 ): Promise<TrackSearchResponse | undefined> => {
   const { query } = params
   if (!query) return
   const resp = await spotifyClient.get<TrackSearchResponse>('/v1/search', {
-    params
+    params,
+    headers: { Authorization: `Bearer: ${accessToken}` }
   })
   return resp.data
 }
 
 const SpotifyAnalysis = () => {
   const [session, loadingSession] = useSession()
-  const token = session?.user
+  const token = session?.accessToken
 
   const [searchQuery, setSearchQuery] = useState<string>()
   const { data } = useSWR(searchQuery ?? null, (query?: string) =>
-    spotifySearchFetcher({ query, type: 'track' })
+    token ? spotifySearchFetcher({ query, type: 'track' }, token) : undefined
   )
 
   const searchItems = data?.tracks
