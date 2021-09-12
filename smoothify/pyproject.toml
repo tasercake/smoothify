@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "smoothify"
+version = "0.1.0"
+description = ""
+authors = ["Krishna Penukonda <penukonda.krishna.moorthy@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9,<3.10"
+numpy = "^1.21.2"
+pandas = "^1.3.3"
+networkx = "^2.6.3"
+scipy = "^1.7.1"
+aiospotify = { path = "../aiospotify", develop = true }
+
+[tool.poetry.dev-dependencies]
+seaborn = "^0.11.2"
+matplotlib = "^3.4.3"
+jupyterlab = "^3.1.11"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
