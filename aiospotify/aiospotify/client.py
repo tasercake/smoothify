@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, Dict, List, TypeVar, Generic
 from pydantic import BaseModel, Extra
 from pydantic.generics import GenericModel
@@ -14,6 +15,7 @@ T = TypeVar("T")
 class SpotifyObject(BaseModel):
     class Config:
         extra = Extra.allow
+    client: Spotify
 
 
 class TrackObject(SpotifyObject):
@@ -46,6 +48,12 @@ class SpotifyPagingObject(SpotifyObject, GenericModel, Generic[T]):
     offset: int
     previous: Optional[str]
     total: int
+
+    async def __anext__():
+        pass
+
+    async def __aiter__():
+        pass
 
 
 class Spotify:
