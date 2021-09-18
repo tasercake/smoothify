@@ -1,59 +1,16 @@
-from __future__ import annotations
-from typing import Optional, Dict, List, TypeVar, Generic
-from pydantic import BaseModel, Extra
-from pydantic.generics import GenericModel
+from typing import Optional, List, Callable, TypeVar
 
 import json
-from datetime import datetime
+from functools import partial
 
 import requests
 import spotipy
 
+from aiospotify.resources.spotify_object import SpotifyObject
+from aiospotify.resources.spotify_saved_track import SpotifySavedTrack
+from aiospotify.resources.mixins.spotify_paging_object import SpotifyPagingObject
+
 T = TypeVar("T")
-
-
-class SpotifyObject(BaseModel):
-    class Config:
-        extra = Extra.allow
-    client: Spotify
-
-
-class TrackObject(SpotifyObject):
-    available_markets: List[str]
-    disc_number: int
-    duration_ms: int
-    explicit: bool
-    href: str
-    id: str
-    is_local: bool
-    is_playable: bool
-    name: str
-    popularity: int
-    preview_url: str
-    track_number: int
-    type: str
-    uri: str
-
-
-class SavedTrackObject(SpotifyObject):
-    added_at: datetime
-    track: TrackObject
-
-
-class SpotifyPagingObject(SpotifyObject, GenericModel, Generic[T]):
-    href: str
-    items: List[T]
-    limit: int
-    next: Optional[str]
-    offset: int
-    previous: Optional[str]
-    total: int
-
-    async def __anext__():
-        pass
-
-    async def __aiter__():
-        pass
 
 
 class Spotify:
@@ -66,9 +23,12 @@ class Spotify:
 
     # region Spotify API methods
     # TODO: Port to use async HTTP methods
-    async def current_user_saved_tracks(self, limit: int = 50, offset: int = 0, market: str = None) -> SpotifyPagingObject[SavedTrackObject]:
+    async def current_user_saved_tracks(self, limit: int = 50, offset: int = 0, market: str = None) -> SpotifyPagingObject[SpotifySavedTrack]:
         result = self.client.current_user_saved_tracks(limit=limit, offset=offset, market=market)
-        return SpotifyPagingObject(**result)
+        get_next = partial(self.current_user_saved_tracks, limit=limit, offset=offset + len(result["items"]), market=market)
+        async def fn(x):
+            return x
+        return SpotifyPagingObject(**result, get_next=fn)
 
     async def audio_features(self, tracks: List[str]):
         max_tracks = 100
