@@ -1,5 +1,13 @@
 from __future__ import annotations
-from typing import Awaitable, Optional, List, Callable, TypeVar, Generic, runtime_checkable
+from typing import (
+    Awaitable,
+    Optional,
+    List,
+    Callable,
+    TypeVar,
+    Generic,
+    runtime_checkable,
+)
 from pydantic.generics import GenericModel
 
 from aiospotify.resources.spotify_object import SpotifyObject
