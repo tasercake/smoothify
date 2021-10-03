@@ -1008,6 +1008,14 @@ objc = ["pyobjc-framework-cocoa"]
 win32 = ["pywin32"]
 
 [[package]]
+name = "simanneal"
+version = "0.5.0"
+description = "Simulated Annealing in Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -1158,7 +1166,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9,<3.10"
-content-hash = "397c22152223879e4f1adb02925de9551570c79ac9349c931d27fb070d79ea2e"
+content-hash = "15d706baf194a097245d9ee6d86a97af796b0a1cdd43d66d99e773fc498016a9"
 
 [metadata.files]
 aiohttp = [
@@ -1967,6 +1975,9 @@ seaborn = [
 send2trash = [
     {file = "Send2Trash-1.8.0-py3-none-any.whl", hash = "sha256:f20eaadfdb517eaca5ce077640cb261c7d2698385a6a0f072a4a5447fd49fa08"},
     {file = "Send2Trash-1.8.0.tar.gz", hash = "sha256:d2c24762fd3759860a0aff155e45871447ea58d2be6bdd39b5c8f966a0c99c2d"},
+]
+simanneal = [
+    {file = "simanneal-0.5.0-py2.py3-none-any.whl", hash = "sha256:f93d90958ff1df68bc4a6e440892a19bbc0569ad9c6442fff659dc011b790b34"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
