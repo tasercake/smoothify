@@ -15,9 +15,14 @@ class SpotifyAuth(ABC):
         return {"Authorization": f"Bearer {await self.get_access_token()}"}
 
 
-class SpotifyPKCE(SpotifyAuth):
+class SpotifyAccessToken(SpotifyAuth):
     def __init__(self, *, token: str):
         self.token = token
 
     async def get_access_token(self):
         return self.token
+
+
+class SpotifyPKCE(SpotifyAuth):
+    async def get_access_token(self):
+        raise NotImplementedError
