@@ -19,18 +19,18 @@ class SpotifyResource(ABC, Generic[T]):
     def __init__(self, *, client: AsyncSpotify):
         self.client = client
 
-    @abstractmethod
     @property
+    @abstractmethod
     def response_type(self) -> Type:
         return int
 
-    @abstractmethod
     @property
+    @abstractmethod
     def path(self) -> str:
         ...
 
-    @abstractmethod
     @property
+    @abstractmethod
     def max_limit(self) -> int:
         ...
 
