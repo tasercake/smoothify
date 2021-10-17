@@ -4,8 +4,8 @@ from functools import partial
 
 import spotipy
 
-from aiospotify.resources.spotify_saved_track import SpotifySavedTrack
-from aiospotify.resources.mixins.spotify_paging_object import SpotifyPagingObject
+from aiospotify.resources.spotify_saved_track import SavedTrack
+from aiospotify.resources.abstract.spotify_paging_object import SpotifyPagingObject
 
 T = TypeVar("T")
 
@@ -18,7 +18,7 @@ class Spotify:
     # TODO: Port to use async HTTP methods
     async def current_user_saved_tracks(
         self, limit: int = 50, offset: int = 0, market: str = None
-    ) -> SpotifyPagingObject[SpotifySavedTrack]:
+    ) -> SpotifyPagingObject[SavedTrack]:
         result = self.client.current_user_saved_tracks(
             limit=limit, offset=offset, market=market
         )
