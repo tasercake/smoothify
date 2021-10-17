@@ -54,22 +54,22 @@ class ListableResource(SpotifyResource):
 
 # TODO: CurrentUserSavedTracks should subclass ListableResource
 class CurrentUserSavedTracks(SpotifyResource):
-    ResponseType = SpotifyPagingObject[SavedTrack]
+    response_type = SpotifyPagingObject[SavedTrack]
 
     path = "/me/tracks"
     max_limit = 50
 
-    async def get(self, *, offset: int = 0, limit: int = None) -> ResponseType:
+    async def get(self, *, offset: int = 0, limit: int = None) -> response_type:
         params = dict(offset=offset, limit=limit or self.max_limit)
         data = await self.client.request("GET", self.path, params=params)
-        return self.ResponseType(**data)
+        return self.response_type(**data)
 
-    async def next(self, *, prev: ResponseType) -> Optional[ResponseType]:
+    async def next(self, *, prev: response_type) -> Optional[response_type]:
         next_href = prev.next
         if not next_href:
             return None
         data = await self.client.request("GET", next_href)
-        return self.ResponseType(**data)
+        return self.response_type(**data)
 
     async def get_all_items(self, *, offset: int = 0) -> List[SavedTrack]:
         data_list: List[SavedTrack] = []
