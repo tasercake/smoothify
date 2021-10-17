@@ -54,7 +54,5 @@ def construct_features(
 
     # Normalize
     if normalize:
-        features_df = (features_df - features_df.min()) / (
-            features_df.max() - features_df.min()
-        )
+        features_df = (features_df - features_df.mean()) / features_df.std()
     return features_df
