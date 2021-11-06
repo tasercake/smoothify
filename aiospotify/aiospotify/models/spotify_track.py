@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from aiospotify.resources.abstract.spotify_object import SpotifyObject
+from aiospotify.models.abstract.spotify_object import SpotifyObject
 
 
 class Track(SpotifyObject):

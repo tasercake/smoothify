@@ -4,8 +4,8 @@ from functools import partial
 
 import spotipy
 
-from aiospotify.resources.spotify_saved_track import SavedTrack
-from aiospotify.resources.abstract.spotify_paging_object import SpotifyPagingObject
+from aiospotify.models.spotify_saved_track import SavedTrack
+from aiospotify.models.abstract.spotify_paging_object import SpotifyPagingObject
 
 T = TypeVar("T")
 
