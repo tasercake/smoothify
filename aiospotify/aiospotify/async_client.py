@@ -1,38 +1,26 @@
 from __future__ import annotations
-from typing import Optional, List, Type, TypeVar, Generic
-from abc import ABC, abstractmethod
+
+import asyncio
 from math import ceil
-from aiospotify.resources.abstract.spotify_object import SpotifyObject
+from typing import AsyncGenerator, Dict, Generic, List, Optional, Type, TypeVar
 
 import aiohttp
 
 from aiospotify.auth import SpotifyAuth
+from aiospotify.resources.abstract.spotify_object import SpotifyObject
 from aiospotify.resources.abstract.spotify_paging_object import SpotifyPagingObject
 from aiospotify.resources.spotify_saved_track import SavedTrack
 
-T = TypeVar("T")
+T = TypeVar("T", bound=SpotifyObject)
 
-# TODO: Rename to something better - this name isn't right but it shouldn't conflict with the SpotifyObject naming scheme
-class SpotifyResource(ABC, Generic[T]):
-    ResponseType = SpotifyObject
+
+class SpotifyResource(Generic[T]):
+    path: str
+    response_type: Type[T]
+    max_limit: int
 
     def __init__(self, *, client: AsyncSpotify):
         self.client = client
-
-    @property
-    @abstractmethod
-    def response_type(self) -> Type:
-        return int
-
-    @property
-    @abstractmethod
-    def path(self) -> str:
-        ...
-
-    @property
-    @abstractmethod
-    def max_limit(self) -> int:
-        ...
 
     async def get(self, *, offset: int = 0, limit: int = None) -> T:
         params = dict(offset=offset, limit=limit or self.max_limit)
@@ -40,49 +28,59 @@ class SpotifyResource(ABC, Generic[T]):
         return self.response_type(**data)
 
 
-class ListableResource(SpotifyResource):
-    # response_type = SpotifyPagingObject[SavedTrack]
+class ListableResource(SpotifyResource, Generic[T]):
+    response_type: Type[SpotifyPagingObject[T]]
 
-    path = "/me/tracks"
-    max_limit = 50
-
-    async def get(self, *, offset: int = 0, limit: int = None) -> response_type:
-        params = dict(offset=offset, limit=limit or self.max_limit)
-        data = await self.client.request("GET", self.path, params=params)
-        return self.response_type(**data)
-
-
-# TODO: CurrentUserSavedTracks should subclass ListableResource
-class CurrentUserSavedTracks(SpotifyResource):
-    response_type = SpotifyPagingObject[SavedTrack]
-
-    path = "/me/tracks"
-    max_limit = 50
-
-    async def get(self, *, offset: int = 0, limit: int = None) -> response_type:
-        params = dict(offset=offset, limit=limit or self.max_limit)
-        data = await self.client.request("GET", self.path, params=params)
-        return self.response_type(**data)
-
-    async def next(self, *, prev: response_type) -> Optional[response_type]:
+    async def next(
+        self, *, prev: SpotifyPagingObject[T]
+    ) -> Optional[SpotifyPagingObject[T]]:
         next_href = prev.next
         if not next_href:
             return None
         data = await self.client.request("GET", next_href)
         return self.response_type(**data)
 
-    async def get_all_items(self, *, offset: int = 0) -> List[SavedTrack]:
-        data_list: List[SavedTrack] = []
-        first = await self.get(offset=offset)
-        items = first.items
-        data_list.extend(items)
+    async def iterate(self, *, offset: int = 0) -> AsyncGenerator[T, None]:
+        has_next = True
+        while has_next:
+            page = await self.get(offset=offset)
+            items = self._extract_items(page)
+            has_next = bool(page.next)
+            for item in items:
+                yield item
+            offset += self.max_limit
 
-        num_remaining_items = first.total - len(items)
-        if num_remaining_items > 0:
-            num_requests = ceil(num_remaining_items / self.max_limit)
-            offsets = [offset + (i * self.max_limit) for i in range(num_requests)]
+    async def get_all(self, *, offset: int = 0) -> List[T]:
+        data_list: List[T] = []
+        # Fetch first page and get pagination info
+        response = await self.get(offset=offset)
+        total_items = response.total
+        data_list.extend(response.items)
+
+        # If there are no remaining items, no further requests are made
+        remaining_items = total_items - len(data_list)
+        num_requests = ceil(remaining_items / self.max_limit)
+        offsets = [
+            offset + len(data_list) + (i * self.max_limit) for i in range(num_requests)
+        ]
+        # Fetch all remaining pages concurrently
+        pages: List[SpotifyPagingObject[T]] = await asyncio.gather(
+            *[self.get(offset=o) for o in offsets]
+        )
+        for page in pages:
+            data_list.extend(page.items)
 
         return data_list
+
+    @classmethod
+    def _extract_items(cls, page: SpotifyPagingObject):
+        return page.items
+
+
+class CurrentUserSavedTracks(ListableResource[SavedTrack]):
+    path = "/me/tracks"
+    response_type = SpotifyPagingObject[SavedTrack]
+    max_limit = 50
 
 
 class AudioFeatures(SpotifyResource):
@@ -91,6 +89,29 @@ class AudioFeatures(SpotifyResource):
 
 class AsyncSpotify:
     base_url: str = "https://api.spotify.com/v1"
+
+    # TODO: Provide this info during type-checking
+    resource_map: Dict[str, Type[SpotifyResource]] = {
+        "current_user_saved_tracks": CurrentUserSavedTracks,
+        "audio_features": AudioFeatures,
+    }
+
+    def __getattr__(self, key):
+        if key in self.resource_map:
+            resource = self.get_resource(key)
+            return resource
+        else:
+            return super().__getattr__(key)
+
+    @classmethod
+    def get_resource_cls(cls, resource_key: str):
+        resource_cls = cls.resource_map[resource_key]
+        return resource_cls
+
+    def get_resource(self, resource_key: str):
+        resource_cls = self.get_resource_cls(resource_key)
+        resource = resource_cls(client=self)
+        return resource
 
     def __init__(
         self,
