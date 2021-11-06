@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from math import ceil
-from typing import TYPE_CHECKING, AsyncGenerator, Generic, List, Optional, Type, TypeVar
+from typing import AsyncGenerator, Generic, List, Optional, Type, TypeVar
 
 from aiospotify.models.abstract.spotify_object import SpotifyObject
 from aiospotify.models.abstract.spotify_paging_object import SpotifyPagingObject
