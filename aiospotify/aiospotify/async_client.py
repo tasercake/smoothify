@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Type
+from typing import Any, Dict, Type
 
 import aiohttp
 
 from aiospotify.auth import SpotifyAuth
-from aiospotify.resources.abstract import SpotifyResource
+from aiospotify.models.abstract.spotify_object import SpotifyObject
+from aiospotify.resources.abstract.spotify_resource import SpotifyResource
 from aiospotify.resources.audio_features import AudioFeatures
 from aiospotify.resources.current_user_saved_tracks import CurrentUserSavedTracks
 
@@ -27,40 +28,30 @@ class AsyncSpotify:
             return super().__getattr__(key)
 
     @classmethod
-    def get_resource_cls(cls, resource_key: str):
+    def get_resource_cls(cls, resource_key: str) -> Type[SpotifyResource]:
         resource_cls = cls.resource_map[resource_key]
         return resource_cls
 
-    def get_resource(self, resource_key: str):
+    def get_resource(self, resource_key: str) -> SpotifyResource:
         resource_cls = self.get_resource_cls(resource_key)
         resource = resource_cls(client=self)
         return resource
 
-    def __init__(
-        self,
-        *,
-        auth: SpotifyAuth,
-        session: aiohttp.ClientSession,
-    ) -> None:
+    def __init__(self, *, auth: SpotifyAuth, session: aiohttp.ClientSession) -> None:
         self.auth = auth
         self.session = session
 
     @property
-    def current_user_saved_tracks(self):
+    def current_user_saved_tracks(self) -> CurrentUserSavedTracks:
         return CurrentUserSavedTracks(client=self)
 
     @property
-    def audio_features(self):
+    def audio_features(self) -> AudioFeatures:
         return AudioFeatures(client=self)
 
     # region HTTP Methods
-    async def request(self, method: str, url: str, **kwargs):
-        """Send a HTTP request to the Spotify API.
-
-        Args:
-            method (str): The HTTP verb to use
-            path (str):
-        """
+    async def request(self, method: str, url: str, **kwargs) -> Dict[str, Any]:
+        """Send a HTTP request to the Spotify API."""
         # If we get a full URL, check that it's for the Spotify API
         is_spotify_api_url = url.startswith(self.base_url)
         if url.startswith("https://"):
@@ -83,18 +74,14 @@ class AsyncSpotify:
 
     # endregion
 
-    # region HTTP helpers
-
-    # endregion
-
     # region Context Manager API
-    async def __aenter__(self):
+    async def __aenter__(self) -> AsyncSpotify:
         return self
 
-    async def __aexit__(self):
+    async def __aexit__(self) -> None:
         await self.close()
 
-    async def close(self):
+    async def close(self) -> None:
         await self.session.close()
 
     # endregion

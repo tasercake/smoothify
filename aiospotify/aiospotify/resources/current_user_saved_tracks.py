@@ -1,4 +1,4 @@
-from aiospotify.resources.abstract import ListableResource
+from aiospotify.resources.abstract.listable_resource import ListableResource
 from aiospotify.models.abstract.spotify_paging_object import SpotifyPagingObject
 from aiospotify.models.spotify_saved_track import SavedTrack
 

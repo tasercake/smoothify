@@ -1,4 +1,4 @@
-from aiospotify.resources.abstract import SpotifyResource
+from aiospotify.resources.abstract.spotify_resource import SpotifyResource
 
 
 class AudioFeatures(SpotifyResource):
