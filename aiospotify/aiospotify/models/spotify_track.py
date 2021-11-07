@@ -1,9 +1,9 @@
 from typing import Optional, List
 
-from aiospotify.resources.abstract.spotify_object import SpotifyObject
+from aiospotify.models.abstract.spotify_object import SpotifyObject
 
 
-class Track(SpotifyObject):
+class SpotifyTrack(SpotifyObject):
     available_markets: List[str]
     disc_number: int
     duration_ms: int

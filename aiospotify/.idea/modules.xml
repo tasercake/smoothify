@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/aiospotify.iml" filepath="$PROJECT_DIR$/.idea/aiospotify.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../frontend/.idea/frontend.iml" filepath="$PROJECT_DIR$/../frontend/.idea/frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../smoothify/.idea/smoothify.iml" filepath="$PROJECT_DIR$/../smoothify/.idea/smoothify.iml" />
+    </modules>
+  </component>
+</project>

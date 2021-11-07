@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, List, TypeVar, Generic
 from pydantic.generics import GenericModel
 
-from aiospotify.resources.abstract.spotify_object import SpotifyObject
+from aiospotify.models.abstract.spotify_object import SpotifyObject
 
 T = TypeVar("T")
 
