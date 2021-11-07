@@ -1,9 +1,9 @@
 from datetime import datetime
 
 from aiospotify.models.abstract.spotify_object import SpotifyObject
-from aiospotify.models.spotify_track import Track
+from aiospotify.models.spotify_track import SpotifyTrack
 
 
-class SavedTrack(SpotifyObject):
+class SpotifySavedTrack(SpotifyObject):
     added_at: datetime
-    track: Track
+    track: SpotifyTrack
