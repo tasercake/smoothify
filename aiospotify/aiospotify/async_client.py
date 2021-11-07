@@ -1,46 +1,29 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional
 
 import aiohttp
 
 from aiospotify.auth import SpotifyAuth
-from aiospotify.models.abstract.spotify_object import SpotifyObject
-from aiospotify.resources.abstract.spotify_resource import SpotifyResource
-from aiospotify.resources.audio_features import AudioFeatures
-from aiospotify.resources.current_user_saved_tracks import CurrentUserSavedTracks
+from aiospotify.resources.library.current_user_saved_tracks import (
+    CurrentUserSavedTracks,
+)
+
+from aiospotify.resources.tracks.audio_analysis import AudioAnalysis
+from aiospotify.resources.tracks.audio_features import AudioFeatures
+from aiospotify.resources.tracks.tracks import Tracks
+from aiospotify.resources.users.current_user import CurrentUser
+from aiospotify.resources.users.user import User
 
 
 class AsyncSpotify:
     base_url: str = "https://api.spotify.com/v1"
 
-    # TODO: Provide this info during type-checking
-    resource_map: Dict[str, Type[SpotifyResource]] = {
-        "audio_features": AudioFeatures,
-        "current_user_saved_tracks": CurrentUserSavedTracks,
-    }
-
-    def __getattr__(self, key):
-        if key in self.resource_map:
-            resource = self.get_resource(key)
-            return resource
-        else:
-            return super().__getattr__(key)
-
-    @classmethod
-    def get_resource_cls(cls, resource_key: str) -> Type[SpotifyResource]:
-        resource_cls = cls.resource_map[resource_key]
-        return resource_cls
-
-    def get_resource(self, resource_key: str) -> SpotifyResource:
-        resource_cls = self.get_resource_cls(resource_key)
-        resource = resource_cls(client=self)
-        return resource
-
     def __init__(self, *, auth: SpotifyAuth, session: aiohttp.ClientSession) -> None:
         self.auth = auth
         self.session = session
 
+    # region Resources
     @property
     def current_user_saved_tracks(self) -> CurrentUserSavedTracks:
         return CurrentUserSavedTracks(client=self)
@@ -49,8 +32,28 @@ class AsyncSpotify:
     def audio_features(self) -> AudioFeatures:
         return AudioFeatures(client=self)
 
+    @property
+    def audio_analysis(self) -> AudioAnalysis:
+        return AudioAnalysis(client=self)
+
+    @property
+    def tracks(self) -> Tracks:
+        return Tracks(client=self)
+
+    @property
+    def current_user(self) -> CurrentUser:
+        return CurrentUser(client=self)
+
+    @property
+    def user(self) -> User:
+        return User(client=self)
+
+    # endregion
+
     # region HTTP Methods
-    async def request(self, method: str, url: str, **kwargs) -> Dict[str, Any]:
+    async def request(
+        self, method: str, url: str, *, suffix: Optional[str] = None, **kwargs
+    ) -> Dict[str, Any]:
         """Send a HTTP request to the Spotify API."""
         # If we get a full URL, check that it's for the Spotify API
         is_spotify_api_url = url.startswith(self.base_url)
@@ -62,6 +65,8 @@ class AsyncSpotify:
             url = url.lstrip("/")
             # Prepend Spotify API base URL
             url = f"{self.base_url}/{url}"
+        if suffix:
+            url = f"{url}/{suffix}"
 
         # Inject auth headers
         auth_headers = await self.auth.get_auth_headers()
@@ -71,17 +76,5 @@ class AsyncSpotify:
         async with self.session.request(method, url, **kwargs) as response:
             # Parse response body as JSON and return it
             return await response.json()
-
-    # endregion
-
-    # region Context Manager API
-    async def __aenter__(self) -> AsyncSpotify:
-        return self
-
-    async def __aexit__(self) -> None:
-        await self.close()
-
-    async def close(self) -> None:
-        await self.session.close()
 
     # endregion
