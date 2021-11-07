@@ -6,5 +6,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="frontend" />
     <orderEntry type="module" module-name="smoothify" />
+    <orderEntry type="module" module-name="smoothjl" />
   </component>
 </module>
