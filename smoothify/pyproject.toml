@@ -12,7 +12,6 @@ networkx = "^2.6.3"
 scipy = "^1.7.1"
 aiospotify = { path = "../aiospotify", develop = true }
 simanneal = "^0.5.0"
-more-itertools = "^8.10.0"
 tqdm = "^4.62.3"
 julia = "^0.5.7"
 tekore = "^4.0.0"

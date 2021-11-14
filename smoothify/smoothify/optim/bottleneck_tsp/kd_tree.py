@@ -41,21 +41,18 @@ class KDTreeBottleneckTSP:
         for i in range(self.num_points):
             # Start with the closest neighbor, keep incrementing until we find an unvisited neighbor
             for k in range(2, self.num_points):
-                # Try to get the closes unvisited neighbor to the current node
+                # Try to get the closest unvisited neighbor to the current node
                 (distance,), (candidate_point,) = tree.query(
                     self.points[current], k=[k]
                 )
-                if (
-                    candidate_point not in visited
-                ):  # Once an unvisited nearest neighbor is found
+                # Once an unvisited nearest neighbor is found
+                if candidate_point not in visited:
                     current = candidate_point  # Move to the neighbor node
                     visited.add(candidate_point)  # Mark the neighbor node as visited
                     path.append(candidate_point)  # Add the neighbor node to the path
-                    found_unvisited_neighbor = True
                     if distance > max_dist:
-                        max_dist = (
-                            distance  # Update the maximum edge length in the page
-                        )
+                        # Update the maximum edge length in the page
+                        max_dist = distance
                     break
         return path, max_dist
 

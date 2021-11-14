@@ -683,14 +683,6 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "more-itertools"
-version = "8.11.0"
-description = "More routines for operating on iterables, beyond itertools"
-category = "main"
-optional = false
-python-versions = ">=3.5"
-
-[[package]]
 name = "multidict"
 version = "5.2.0"
 description = "multidict implementation"
@@ -1400,7 +1392,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9,<3.10"
-content-hash = "4c95416678de2580ae17d1a221baae2e13edbee48a8feab6f1aabc73b4c810b2"
+content-hash = "0c22eb7f467691f0e2b486661e523683e9abed717ac4bb3931e36d9d0034d112"
 
 [metadata.files]
 aiohttp = [
@@ -1946,10 +1938,6 @@ matplotlib-inline = [
 mistune = [
     {file = "mistune-0.8.4-py2.py3-none-any.whl", hash = "sha256:88a1051873018da288eee8538d476dffe1262495144b33ecb586c4ab266bb8d4"},
     {file = "mistune-0.8.4.tar.gz", hash = "sha256:59a3429db53c50b5c6bcc8a07f8848cb00d7dc8bdb431a4ab41920d201d4756e"},
-]
-more-itertools = [
-    {file = "more-itertools-8.11.0.tar.gz", hash = "sha256:0a2fd25d343c08d7e7212071820e7e7ea2f41d8fb45d6bc8a00cd6ce3b7aab88"},
-    {file = "more_itertools-8.11.0-py3-none-any.whl", hash = "sha256:88afff98d83d08fe5e4049b81e2b54c06ebb6b3871a600040865c7a592061cbb"},
 ]
 multidict = [
     {file = "multidict-5.2.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3822c5894c72e3b35aae9909bef66ec83e44522faf767c0ad39e0e2de11d3b55"},
