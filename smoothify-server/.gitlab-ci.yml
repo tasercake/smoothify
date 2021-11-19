@@ -1,0 +1,74 @@
+image: tiangolo/docker-with-compose
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  - pip install docker-auto-labels
+
+stages:
+  - test
+  - build
+  - deploy
+
+tests:
+  stage: test
+  script:
+    - sh ./scripts/test.sh
+  tags:
+    - build
+    - test
+
+build-stag:
+  stage: build
+  script:
+    - TAG=stag FRONTEND_ENV=staging sh ./scripts/build-push.sh
+  only:
+    - master
+  tags:
+    - build
+    - test
+    
+build-prod:
+  stage: build
+  script:
+    - TAG=prod FRONTEND_ENV=production sh ./scripts/build-push.sh
+  only:
+    - production
+  tags:
+    - build
+    - test
+
+deploy-stag:
+  stage: deploy
+  script: 
+    - >
+      DOMAIN=next.api.smoothify.tasercake.com
+      TRAEFIK_TAG=next.api.smoothify.tasercake.com
+      STACK_NAME=next-smoothify-api
+      TAG=stag
+      sh ./scripts/deploy.sh
+  environment:
+    name: staging
+    url: https://next.api.smoothify.tasercake.com
+  only:
+    - master
+  tags:
+    - swarm
+    - stag
+
+deploy-prod:
+  stage: deploy
+  script:
+    - >
+      DOMAIN=api.smoothify.tasercake.com
+      TRAEFIK_TAG=api.smoothify.tasercake.com
+      STACK_NAME=smoothify-api
+      TAG=prod
+      sh ./scripts/deploy.sh
+  environment:
+    name: production
+    url: https://api.smoothify.tasercake.com
+  only:
+    - production
+  tags:
+    - swarm
+    - prod

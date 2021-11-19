@@ -12,15 +12,18 @@ networkx = "^2.6.3"
 scipy = "^1.7.1"
 aiospotify = { path = "../aiospotify", develop = true }
 simanneal = "^0.5.0"
-more-itertools = "^8.10.0"
 tqdm = "^4.62.3"
+julia = "^0.5.7"
+tekore = "^4.0.0"
+joblib = "^1.1.0"
+ipywidgets = "^7.6.5"
 
 [tool.poetry.dev-dependencies]
 seaborn = "^0.11.2"
 matplotlib = "^3.4.3"
 jupyterlab = "^3.1.11"
 black = "^21.9b0"
-hypertools = "^0.7.0"
+mypy = "^0.910"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
