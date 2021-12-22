@@ -25,3 +25,6 @@
 
 # File-based project format
 *.iws
+
+# Local python version
+.python-version
