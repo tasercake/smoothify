@@ -5,22 +5,18 @@ import numpy as np
 from joblib import delayed
 from scipy.spatial import cKDTree
 
-from smoothify.optim.bottleneck_tsp.base import BottleneckTSPResult
-from smoothify.utils.parallel import ProgressParallel
+from smoothify.optim.base import SmoothifyResult, Smoothifier
+from smoothify.utils.progress_parallel import ProgressParallel
 
 
 @dataclass
-class KDTreeBottleneckTSPResult(BottleneckTSPResult):
+class KDTreeSmoothifyResult(SmoothifyResult):
     paths: List[List[int]]
     max_dists: List[float]
     best_path_idx: int
 
 
-class KDTreeBottleneckTSP:
-    def __init__(self, *, points: np.ndarray):
-        self.points = points
-        self.num_points = self.points.shape[0]
-
+class KDTreeBottleneckTSP(Smoothifier):
     def build_tree(self) -> cKDTree:
         tree = cKDTree(self.points)
         return tree
@@ -56,7 +52,7 @@ class KDTreeBottleneckTSP:
                     break
         return path, max_dist
 
-    def get_best_path(self) -> KDTreeBottleneckTSPResult:
+    def get_best_path(self) -> KDTreeSmoothifyResult:
         tree = self.build_tree()
         tasks = ProgressParallel(n_jobs=-1, verbose=50)(
             [delayed(self.greedy_nearest_path)(tree, i) for i in range(self.num_points)]
@@ -65,7 +61,7 @@ class KDTreeBottleneckTSP:
         best_path_idx = int(np.argmin(max_dists))
         best_path = paths[best_path_idx]
         min_max_dist = max_dists[best_path_idx]
-        return KDTreeBottleneckTSPResult(
+        return KDTreeSmoothifyResult(
             paths=paths,
             max_dists=max_dists,
             best_path_idx=best_path_idx,

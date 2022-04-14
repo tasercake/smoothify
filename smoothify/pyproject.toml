@@ -1,21 +1,41 @@
-[project]
+[tool.poetry]
 name = "smoothify"
 version = "0.1.0"
-description = "Smooth paths through Spotify tracks"
+description = "Buttery smooth Spotify playlists 🍑"
 readme = "README.md"
-requires-python = ">=3.8"
-authors = [
-  {email = "penukonda.krishna.moorthy@gmail.com"},
-  {name = "Krishna Penukonda"}
-]
+authors = ["Krishna Penukonda <penukonda.krishna.moorthy@gmail.com>"]
 
-[project.urls]
+[tool.poetry.urls]
 homepage = "https://github.com/tasercake/smoothify"
 repository = "https://github.com/tasercake/smoothify"
 
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+tekore = "^4.3.0"
+numpy = "^1.22.3"
+scipy = "^1.8.0"
+pandas = "^1.4.2"
+hdbscan = "^0.8.28"
+scikit-learn = "^1.0.2"
+joblib = "^1.1.0"
+tqdm = "^4.64.0"
+julia = "^0.5.7"
+jupyterlab = "^3.3.3"
+ipywidgets = "^7.7.0"
+matplotlib = "^3.5.1"
+seaborn = "^0.11.2"
+bokeh = "^2.4.2"
+click = "^8.1.2"
+fastapi = { version = "^0.75.1", optional = true }
+
+[tool.poetry.dev-dependencies]
+black = "^22.3.0"
+mypy = "^0.942"
+pytest = "^7.1.1"
+
+[tool.poetry.extras]
+server =["fastapi"]
+
 [build-system]
-requires = [
-    "setuptools ~= 58.0",
-    "wheel",
-]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
