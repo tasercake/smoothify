@@ -2,26 +2,179 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e7aa8a08-ac07-4a16-8c5d-6e1ad366f17f" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/csv-plugin.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.gitlab-ci.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/smoothify-server.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/.idea/watcherTasks.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/.flake8" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic.ini" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic/README" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic/env.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic/script.py.mako" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic/versions/.keep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/alembic/versions/d4867f3a4c0a_first_revision.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/endpoints/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/endpoints/items.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/endpoints/login.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/endpoints/users.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/api_v1/endpoints/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/api/deps.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/backend_pre_start.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/celeryworker_pre_start.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/core/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/core/celery_app.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/core/config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/core/security.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/crud/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/crud/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/crud/crud_item.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/crud/crud_user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/db/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/db/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/db/base_class.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/db/init_db.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/db/session.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/email-templates/src/new_account.mjml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/email-templates/src/reset_password.mjml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/email-templates/src/test_email.mjml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/initial_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/models/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/models/item.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/models/user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/schemas/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/schemas/item.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/schemas/msg.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/schemas/token.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/schemas/user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/api_v1/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/api_v1/test_celery.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/api_v1/test_items.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/api_v1/test_login.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/api/api_v1/test_users.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/conftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/crud/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/crud/test_item.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/crud/test_user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/utils/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/utils/item.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/utils/user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests/utils/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/tests_pre_start.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/app/worker.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/mypy.ini" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/prestart.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/pyproject.toml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/scripts/format-imports.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/scripts/format.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/scripts/lint.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/scripts/test-cov-html.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/scripts/test.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/tests-start.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/app/worker-start.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/backend.dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/backend/celeryworker.dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/cookiecutter-config-file.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/docker-compose.override.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/docker-compose.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/.dockerignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/Dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/babel.config.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/nginx-backend-not-found.conf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/favicon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/android-chrome-192x192.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/android-chrome-512x512.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon-120x120.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon-152x152.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon-180x180.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon-60x60.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon-76x76.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/apple-touch-icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/favicon-16x16.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/favicon-32x32.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/msapplication-icon-144x144.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/mstile-150x150.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/img/icons/safari-pinned-tab.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/manifest.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/public/robots.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/App.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/api.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/assets/logo.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/component-hooks.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/components/NotificationsManager.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/components/RouterComponent.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/components/UploadButton.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/env.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/interfaces/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/main.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/plugins/vee-validate.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/plugins/vuetify.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/registerServiceWorker.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/router.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/shims-tsx.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/shims-vue.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/admin/actions.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/admin/getters.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/admin/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/admin/mutations.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/admin/state.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/main/actions.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/main/getters.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/main/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/main/mutations.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/main/state.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/store/state.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/utils.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/Login.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/PasswordRecovery.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/ResetPassword.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/Dashboard.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/Main.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/Start.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/admin/Admin.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/admin/AdminUsers.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/admin/CreateUser.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/admin/EditUser.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/profile/UserProfile.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/profile/UserProfileEdit.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/src/views/main/profile/UserProfileEditPassword.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/tests/unit/upload-button.spec.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/tsconfig.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/tslint.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/frontend/vue.config.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/poetry.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/pyproject.toml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/scripts/build-push.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/scripts/build.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/scripts/deploy.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/scripts/test-local.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../smoothify-server/scripts/test.sh" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/smoothify.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/smoothify.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/watcherTasks.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/watcherTasks.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/Floyd Warshall.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/Floyd Warshall.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/K-D Tree.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/K-D Tree.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/Simulated Annealing.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/Simulated Annealing.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/setup.cfg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/__main__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/features/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/bottleneck_tsp/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/bottleneck_tsp/base.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/bottleneck_tsp/kd_tree.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/utils/parallel.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../smoothjl/smoothjl/Project.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../smoothjl/smoothjl/src/smoothjl.jl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.cfg" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,7 +233,6 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/scratches/scratch_2.txt" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/poetry.toml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyproject.toml" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/setup.cfg" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/smoothify/__main__.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/smoothify/core/__init__.py" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -93,21 +245,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "TEXT"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;TEXT&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/server" />
@@ -136,6 +288,7 @@
       <workItem from="1641030704068" duration="18515000" />
       <workItem from="1641056677869" duration="10578000" />
       <workItem from="1649930140143" duration="5059000" />
+      <workItem from="1649941494947" duration="4431000" />
     </task>
     <servers />
   </component>
