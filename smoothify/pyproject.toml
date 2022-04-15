@@ -21,6 +21,7 @@ joblib = "^1.1.0"
 tqdm = "^4.64.0"
 julia = "^0.5.7"
 click = "^8.1.2"
+structlog = "^21.5.0"
 
 [tool.poetry.dev-dependencies]
 # Visualization & notebooks
@@ -34,9 +35,10 @@ hdbscan = "^0.8.28"
 black = "^22.3.0"
 mypy = "^0.942"
 pytest = "^7.1.1"
+vulture = "^2.3"
 
 [tool.poetry.scripts]
-smoothify = "smoothify.__main__:main"
+smoothify = "smoothify.__main__:cli"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

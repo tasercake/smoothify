@@ -12,10 +12,17 @@ class SmoothifyResult:
 
 
 class Smoothifier(ABC):
-    def __init__(self, *, points: np.ndarray):
-        self.points = points
-        self.num_points = self.points.shape[0]
-
     @abstractmethod
-    def get_best_path(self) -> SmoothifyResult:
+    def get_best_path(self, *, points: np.ndarray) -> SmoothifyResult:
+        """
+        Find the 'optimal' path through the given points in N-dimensional space.
+        The heuristic that determines the optimal path is up to the implementation.
+
+        Args:
+            points: A KxN array of K points in N-dimensional space.
+
+        Returns:
+            A SmoothifyResult object containing the 'best' path through the points
+            based on the algorithm's heuristic.
+        """
         pass
