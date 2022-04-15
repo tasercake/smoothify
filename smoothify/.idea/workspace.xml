@@ -2,12 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e7aa8a08-ac07-4a16-8c5d-6e1ad366f17f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/smoothify.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/smoothify.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/watcherTasks.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/watcherTasks.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/K-D Tree.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/K-D Tree.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/bottleneck_tsp/kd_tree.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/bottleneck_tsp/kd_tree.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/smoothify/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/__main__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/smoothify/core/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/core/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/smoothify/optim/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/smoothify/optim/kd_tree.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/kd_tree.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,21 +36,80 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
+  <component name="GitToolBoxStore">
+    <option name="recentBranches">
+      <RecentBranches>
+        <option name="branchesForRepo">
+          <list>
+            <RecentBranchesForRepo>
+              <option name="branches">
+                <list>
+                  <RecentBranch>
+                    <option name="branchName" value="cli" />
+                    <option name="lastUsedInstant" value="1641145033" />
+                  </RecentBranch>
+                  <RecentBranch>
+                    <option name="branchName" value="server" />
+                    <option name="lastUsedInstant" value="1641143230" />
+                  </RecentBranch>
+                  <RecentBranch>
+                    <option name="branchName" value="main" />
+                    <option name="lastUsedInstant" value="1641143229" />
+                  </RecentBranch>
+                </list>
+              </option>
+              <option name="repositoryRootUrl" value="file://$PROJECT_DIR$/.." />
+            </RecentBranchesForRepo>
+          </list>
+        </option>
+      </RecentBranches>
+    </option>
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/scratches/scratch_1.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/scratches/scratch_2.txt" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/poetry.toml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyproject.toml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/smoothify/__main__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/smoothify/core/__init__.py" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectId" id="20sRwf6VCtwDd0y6GMJyz6DCVug" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="NewWatcherDialog.advanced.open" value="true" />
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../smoothify-server" />
-    <property name="node.js.detected.package.eslint" value="true" />
-    <property name="node.js.selected.package.eslint" value="(autodetect)" />
-    <property name="settings.editor.selected.configurable" value="watcher.settings" />
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "Errors"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "TEXT"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/server" />
+      <recent name="$PROJECT_DIR$/../server" />
+      <recent name="$PROJECT_DIR$/../smoothify-server" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/smoothify/optim" />
+      <recent name="$PROJECT_DIR$/../smoothify-server/template" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/smoothify/server" />
+      <recent name="$PROJECT_DIR$/smoothify/server/backend" />
+    </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -58,6 +121,12 @@
       <updated>1636831552008</updated>
       <workItem from="1636831554617" duration="255000" />
       <workItem from="1637117324778" duration="10316000" />
+      <workItem from="1637825768173" duration="599000" />
+      <workItem from="1641030704068" duration="18515000" />
+      <workItem from="1641056677869" duration="10578000" />
+      <workItem from="1649930140143" duration="5059000" />
+      <workItem from="1649941494947" duration="4431000" />
+      <workItem from="1649958735391" duration="21513000" />
     </task>
     <servers />
   </component>

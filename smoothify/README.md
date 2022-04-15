@@ -1,41 +1,45 @@
 # Smoothify
 
+This is the core library that provides the combinatorial optimization routines used by Smoothify.
+
 ## Getting Started
 
-### Install Poetry
-
-This package uses `poetry` as its build system. You'll need to install it first if you don't already have it.
+### Clone This Repository
 
 ```bash
-pip install poetry
+# Clone repo from github
+git clone https://github.com/tasercake/smoothify
+# Change into the smoothify directory
+cd smoothify
 ```
 
-### Environment & Dependencies
+(I haven't gotten around to publishing this project yet, and I'm not sure if I ever will)
+
+### [Optional] Create a Virtual Environment
+
+This isn't strictly necessary, but is good practice when starting a new Python project.
+
+I like to use [pyenv](https://github.com/pyenv/pyenv) with [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+to manage environments for my Python projects.
+
+[Anaconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) 
+or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) are popular alternatives.
+
+### Install Dependencies
 
 ```bash
-poetry install
+pip install .
+
+# This package can be installed in editable mode
+pip install -e .
 ```
 
-This creates a Python virtual environment and installs all the dependencies required by *Smoothify*.
-
-### Run notebook Server
+### Run Notebook
 
 First, the notebook server:
 
 ```bash
-poetry run jupyter lab
+jupyter lab
 ```
 
-You can then pick a notebook (from the `notebooks` directory) and run it.
-
-For now, open up `notebooks/K-D Tree.ipynb` in Jupyter Lab.
-
-### Run notebook
-
-Grab a Spotify API Access Token for your account [here](https://developer.spotify.com/console/get-current-user-saved-tracks/). Make sure to check the required permissions/scopes when getting your token.
-
-In the notebook, replace `ACCESS_TOKEN` with the token you just got from Spotify.
-
-You should now be able to run all the cells in the notebook, and what you'll get is a list of Spotify Track UIDs.
-
-Copy these Track UIDs, create a new Spotify playlist, and hit <kbd>Ctrl</kbd>+<kbd>V</kbd> to populate the playlist.
+In Jupyter Lab, open up `notebooks/K-D Tree.ipynb` and follow the instructions to get a smoothified playlist.
