@@ -149,7 +149,6 @@ services:
       # Allow explicit env var override for tests
       - SMTP_HOST=${SMTP_HOST}
     build:
-      context: ./backend
       dockerfile: backend.dockerfile
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
@@ -173,7 +172,6 @@ services:
       # Allow explicit env var override for tests
       - SMTP_HOST=${SMTP_HOST?Variable not set}
     build:
-      context: ./backend
       dockerfile: celeryworker.dockerfile
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
