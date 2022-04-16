@@ -2,16 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e7aa8a08-ac07-4a16-8c5d-6e1ad366f17f" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/smoothify.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/smoothify.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/watcherTasks.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/watcherTasks.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/__main__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/core/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/core/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoothify/optim/kd_tree.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoothify/optim/kd_tree.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,12 +39,8 @@
               <option name="branches">
                 <list>
                   <RecentBranch>
-                    <option name="branchName" value="cli" />
-                    <option name="lastUsedInstant" value="1641145033" />
-                  </RecentBranch>
-                  <RecentBranch>
                     <option name="branchName" value="server" />
-                    <option name="lastUsedInstant" value="1641143230" />
+                    <option name="lastUsedInstant" value="1650047612" />
                   </RecentBranch>
                   <RecentBranch>
                     <option name="branchName" value="main" />
@@ -86,10 +76,11 @@
   "keyToString": {
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "/home/krishna/Documents/smoothify",
     "node.js.detected.package.eslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "Errors"
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   },
   "keyToStringList": {
     "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
@@ -126,7 +117,7 @@
       <workItem from="1641056677869" duration="10578000" />
       <workItem from="1649930140143" duration="5059000" />
       <workItem from="1649941494947" duration="4431000" />
-      <workItem from="1649958735391" duration="21513000" />
+      <workItem from="1649958735391" duration="27256000" />
     </task>
     <servers />
   </component>
