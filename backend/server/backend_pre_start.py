@@ -19,8 +19,8 @@ wait_seconds = 1
 )
 def init() -> None:
     try:
-        db = SessionLocal()
         # Try to create session to check if DB is awake
+        db = SessionLocal()
         db.execute("SELECT 1")
     except Exception as e:
         logger.error(e)
