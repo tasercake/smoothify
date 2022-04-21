@@ -1,30 +1,79 @@
-# ===== IntelliJ Files =====
-# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+# ===== Python =====
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
 
-# User-specific stuff
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/dictionaries
-.idea/**/shelf
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# AWS User-specific
-.idea/**/aws.xml
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
 
-# Generated files
-.idea/**/contentModel.xml
+# Sphinx documentation
+docs/_build/
+# mkdocs documentation
+/site
 
-# Sensitive or high-churn files
-.idea/**/dataSources/
-.idea/**/dataSources.ids
-.idea/**/dataSources.local.xml
-.idea/**/sqlDataSources.xml
-.idea/**/dynamic.xml
-.idea/**/uiDesigner.xml
-.idea/**/dbnavigator.xml
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
-# File-based project format
-*.iws
-
-# Local python version
+# Environments
+*.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 .python-version
+
+# Jupyter Notebook
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# C extensions
+cython_debug/
+*.so
+
+# ===== IntelliJ Files =====
+.idea
+*.iws
