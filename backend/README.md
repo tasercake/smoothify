@@ -1,10 +1,27 @@
-# server
+# Smoothify server
+
+## Installation
+
+Requires [Poetry](https://python-poetry.org/) for Python package and environment management.
+
+```bash
+poetry install
+```
+
+## Usage
+
+```bash
+poetry run uvicorn server.main:app --reload
+```
+
+---
+
+# Legacy instructions
 
 ## Backend Requirements
 
 * [Docker](https://www.docker.com/).
 * [Docker Compose](https://docs.docker.com/compose/install/).
-* [Poetry](https://python-poetry.org/) for Python package and environment management.
 
 ## Backend local development
 
