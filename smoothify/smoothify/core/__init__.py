@@ -18,7 +18,7 @@ class SmoothifyManager:
         # Cache
         self._current_user: Optional[PrivateUser] = None
 
-    async def smoothify_user_library(self) -> None:
+    async def smoothify_user_library(self) -> str:
         """
         Smoothify a user's library of favorite tracks.
         """
@@ -48,7 +48,7 @@ class SmoothifyManager:
 
         # Create smoothified playlist
         smoothified_track_uris = [track_list[node_idx].uri for node_idx in best_path]
-        await self.create_playlist_with_tracks(
+        return await self.create_playlist_with_tracks(
             user_id=current_user.id,
             playlist_name=f"{current_user.display_name}'s Library (but smoother)",
             track_uris=smoothified_track_uris,
@@ -56,7 +56,7 @@ class SmoothifyManager:
             collaborative=False,
         )
 
-    async def smoothify_playlist(self, playlist_id: str) -> None:
+    async def smoothify_playlist(self, playlist_id: str) -> str:
         current_user = await self._get_current_user()
 
         # Get playlist tracks
@@ -83,7 +83,7 @@ class SmoothifyManager:
 
         # Create smoothified playlist
         smoothified_track_uris = [track_list[node_idx].uri for node_idx in best_path]
-        await self.create_playlist_with_tracks(
+        return await self.create_playlist_with_tracks(
             user_id=current_user.id,
             playlist_name=f"{playlist.name} (but smoother)",
             track_uris=smoothified_track_uris,
@@ -108,7 +108,7 @@ class SmoothifyManager:
         track_uris: List[str],
         public: bool = False,
         collaborative: bool = False,
-    ) -> None:
+    ) -> str:
         # Create new playlist
         new_playlist = await self.spotify.playlist_create(
             user_id, playlist_name, public=public
@@ -118,7 +118,7 @@ class SmoothifyManager:
         )
 
         # Add tracks to new playlist
-        await self.spotify.playlist_add(new_playlist.id, track_uris)
+        return await self.spotify.playlist_add(new_playlist.id, track_uris)
 
     async def _get_current_user(self) -> PrivateUser:
         if not self._current_user:
