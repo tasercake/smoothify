@@ -1,15 +1,13 @@
 import logging
 
-from server.db.init_db import init_db
-from server.db.session import SessionLocal
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def init() -> None:
-    db = SessionLocal()
-    init_db(db)
+    """
+    Initialize the database with some data.
+    """
 
 
 def main() -> None:
