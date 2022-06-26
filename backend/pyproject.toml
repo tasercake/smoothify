@@ -5,7 +5,7 @@ description = "Backend server for Smoothify"
 authors = ["Krishna Penukonda <hello@tasercake.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.11"
 # Web server core
 fastapi = "^0.75.1"
 pydantic = { version = "^1.9.0", extras = ["email"] }
@@ -31,8 +31,11 @@ Jinja2 = "^3.1.1"
 structlog = "^21.5.0"
 sentry-sdk = "^1.5.10"
 python-multipart = "^0.0.5"
+tekore = "^4.4.0"
+fastapi-utils = "^0.2.1"
+smoothify = {path = "../smoothify", develop = true}
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 # Typing & stubs
 mypy = "^0.942"
 sqlalchemy-stubs = "^0.4"
