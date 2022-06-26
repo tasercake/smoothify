@@ -64,7 +64,9 @@ class SmoothifyManager:
         playlist: FullPlaylist = await self.spotify.playlist(playlist_id)
         logger.info(f"Will smoothify {playlist.name}")
         track_list = [
-            track.track async for track in self.spotify.all_items(playlist.tracks)
+            track.track
+            async for track in self.spotify.all_items(playlist.tracks)
+            if track.track
         ]
         logger.info(f"Got {len(track_list)} tracks")
 
