@@ -7,24 +7,39 @@ const generateRandomPoints = (nPoints: number, nDims: number) => {
   )
 }
 
-const N_POINTS = 10
-const N_DIMS = 2
+const N_POINTS = 100
+const N_DIMS = 9
 
 const Home = () => {
   const [points, setPoints] = useState<number[][] | undefined>()
   const [bestPath, setBestPath] = useState<number[] | undefined>(undefined)
-  const workerRef = useRef<Worker>()
+  const [visPoints, setVisPoints] = useState<[number, number][] | undefined>(
+    undefined
+  )
 
+  // Best path worker setup
+  const bestPathWorkerRef = useRef<Worker>()
   useEffect(() => {
     const worker = new Worker(
       new URL('../lib/webWorkers/singleSourceBestPath.ts', import.meta.url)
     )
-    workerRef.current = worker
+    bestPathWorkerRef.current = worker
     worker.onmessage = (event) => {
-      console.debug('Main thread received event', event.data)
       setBestPath(event.data)
     }
   }, [])
+
+  // TSNE worker setup
+  const tsneWorkerRef = useRef<Worker>()
+  useEffect(() => {
+    const worker = new Worker(
+      new URL('../lib/webWorkers/tsne.ts', import.meta.url)
+    )
+    tsneWorkerRef.current = worker
+    worker.onmessage = (event) => {
+      setVisPoints(event.data)
+    }
+  })
 
   return (
     <div>
@@ -36,7 +51,7 @@ const Home = () => {
         <button
           onClick={() => {
             const points = generateRandomPoints(N_POINTS, N_DIMS)
-            console.debug(`Generated ${points.length} random points`, points)
+            console.log(`Generated ${points.length} random points`, points)
             setPoints(points)
             setBestPath(undefined)
           }}
@@ -46,9 +61,32 @@ const Home = () => {
         {points && (
           <>
             <p>Generated {points.length} points</p>
-            <button onClick={() => workerRef.current?.postMessage(points)}>
+            <button onClick={() => tsneWorkerRef.current?.postMessage(points)}>
+              TSNE
+            </button>
+            <button
+              onClick={() => bestPathWorkerRef.current?.postMessage(points)}
+            >
               Sort points
             </button>
+          </>
+        )}
+        {visPoints && (
+          <>
+            <p>TSNE points</p>
+            <svg width={500} height={500}>
+              <g transform={`translate(${250}, ${250})`}>
+                {visPoints.map(([x, y], idx) => (
+                  <circle
+                    key={idx}
+                    cx={x * 250}
+                    cy={y * 250}
+                    r={1}
+                    fill="red"
+                  />
+                ))}
+              </g>
+            </svg>
           </>
         )}
         {bestPath && (
