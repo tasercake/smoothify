@@ -7,12 +7,12 @@ const generateRandomPoints = (nPoints: number, nDims: number) => {
   )
 }
 
-const N_POINTS = 1000
-const N_DIMS = 20
+const N_POINTS = 10
+const N_DIMS = 2
 
 const Home = () => {
   const [points, setPoints] = useState<number[][] | undefined>()
-  const [bestPath, setBestPath] = useState<number[][] | undefined>(undefined)
+  const [bestPath, setBestPath] = useState<number[] | undefined>(undefined)
   const workerRef = useRef<Worker>()
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const Home = () => {
     )
     workerRef.current = worker
     worker.onmessage = (event) => {
-      console.log('Main thread received event', event.data)
+      console.debug('Main thread received event', event.data)
       setBestPath(event.data)
     }
   }, [])
@@ -33,10 +33,11 @@ const Home = () => {
       </Head>
       <section>
         <h1>Smoothify</h1>
-        <p>Original</p>
         <button
           onClick={() => {
-            setPoints(generateRandomPoints(N_POINTS, N_DIMS))
+            const points = generateRandomPoints(N_POINTS, N_DIMS)
+            console.debug(`Generated ${points.length} random points`, points)
+            setPoints(points)
             setBestPath(undefined)
           }}
         >
@@ -44,21 +45,16 @@ const Home = () => {
         </button>
         {points && (
           <>
-            <ol>
-              {points.map((point) => (
-                <li key={point.join(' ')}>{point.join(' ')}</li>
-              ))}
-            </ol>
+            <p>Generated {points.length} points</p>
             <button onClick={() => workerRef.current?.postMessage(points)}>
               Sort points
             </button>
-            <p>Sorted</p>
-            <ol>
-              {bestPath &&
-                bestPath.map((idx) => (
-                  <li key={idx.join(' ')}>{idx.join(' ')}</li>
-                ))}
-            </ol>
+          </>
+        )}
+        {bestPath && (
+          <>
+            <p>Sorted {bestPath.length} points</p>
+            {bestPath.join(', ')}
           </>
         )}
       </section>

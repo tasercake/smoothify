@@ -11,7 +11,7 @@ export const distanceFn = (p1: number[], p2: number[]) => {
   )
 }
 
-export const singleSourceBestPath = (points: number[][]) => {
+export const singleSourceBestPath = (points: number[][]): number[] => {
   const distances = points.map((p1, i) =>
     points.map((p2, j) => (i === j ? 0 : distanceFn(p1, p2)))
   )
@@ -28,7 +28,7 @@ export const singleSourceBestPath = (points: number[][]) => {
   const visited = new Set<number>()
   const bestPath = []
 
-  let currentIdx = 0 // TODO: Start with a random index
+  let currentIdx = Math.floor(Math.random() * points.length)
   visited.add(currentIdx)
   bestPath.push(currentIdx)
 
@@ -42,5 +42,5 @@ export const singleSourceBestPath = (points: number[][]) => {
     currentIdx = nextIdx
   }
 
-  return bestPath.map((i) => points[i])
+  return bestPath
 }
