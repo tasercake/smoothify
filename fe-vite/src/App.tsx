@@ -1,32 +1,104 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import Plot from 'react-plotly.js'
+import BestPathWorker from './lib/webWorkers/singleSourceBestPath?worker'
+import TsneWorker from './lib/webWorkers/tsne?worker'
+
+const generateRandomPoints = (nPoints: number, nDims: number) => {
+  return Array.from({ length: nPoints }, () =>
+    Array.from({ length: nDims }, () => Math.floor((Math.random() - 0.5) * 20))
+  )
+}
+
+const N_POINTS = 100
+const N_DIMS = 9
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [points, setPoints] = useState<number[][] | undefined>()
+  const [bestPath, setBestPath] = useState<number[] | undefined>(undefined)
+  const [visPoints, setVisPoints] = useState<[number, number][] | undefined>(
+    undefined
+  )
+
+  // Best path worker setup
+  const bestPathWorkerRef = useRef<Worker>()
+  useEffect(() => {
+    const worker = new BestPathWorker()
+    bestPathWorkerRef.current = worker
+    worker.onmessage = (event) => {
+      setBestPath(event.data)
+    }
+    return () => {
+      // Terminate worker & set worker ref to undefined
+      bestPathWorkerRef.current?.terminate()
+      bestPathWorkerRef.current = undefined
+    }
+  }, [])
+
+  // TSNE worker setup
+  const tsneWorkerRef = useRef<Worker>()
+  useEffect(() => {
+    const worker = new TsneWorker()
+    tsneWorkerRef.current = worker
+    worker.onmessage = (event) => {
+      setVisPoints(event.data)
+    }
+    return () => {
+      // Terminate worker & set worker ref to undefined
+      tsneWorkerRef.current?.terminate()
+      tsneWorkerRef.current = undefined
+    }
+  })
 
   return (
-    <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div>
+      <section>
+        <h1>Smoothify</h1>
+        <button
+          onClick={() => {
+            const points = generateRandomPoints(N_POINTS, N_DIMS)
+            console.log(`Generated ${points.length} random points`, points)
+            setPoints(points)
+            setBestPath(undefined)
+          }}
+        >
+          Generate points
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+        {points && (
+          <>
+            <p>Generated {points.length} points</p>
+            <button onClick={() => tsneWorkerRef.current?.postMessage(points)}>
+              TSNE
+            </button>
+            <button
+              onClick={() => bestPathWorkerRef.current?.postMessage(points)}
+            >
+              Sort points
+            </button>
+          </>
+        )}
+        <br />
+        {visPoints && (
+          <Plot
+            data={[
+              {
+                x: visPoints.map(([x, _]) => x),
+                y: visPoints.map(([_, y]) => y),
+                type: 'scattergl',
+                mode: 'markers',
+                marker: { color: 'red' }
+              }
+            ]}
+            layout={{ width: 400, height: 400 }}
+          />
+        )}
+        {bestPath && (
+          <>
+            <p>Sorted {bestPath.length} points</p>
+            {bestPath.join(', ')}
+          </>
+        )}
+      </section>
     </div>
   )
 }
