@@ -11,7 +11,14 @@ export const distanceFn = (p1: number[], p2: number[]) => {
   )
 }
 
-export const singleSourceBestPath = (points: number[][]): number[] => {
+/**
+ * Given a pairwise distance matrix for a set of points and a starting point,
+ * find a path through all the points that minimizes the distance travelled.
+ *
+ * This is not an optimal solution; it's a greedy algorithm that always chooses the
+ * next closest point that has not yet been visited.
+ */
+export const greedyBestPath = (points: number[][]): number[] => {
   const distances = points.map((p1, i) =>
     points.map((p2, j) => (i === j ? 0 : distanceFn(p1, p2)))
   )

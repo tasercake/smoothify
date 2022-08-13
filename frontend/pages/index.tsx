@@ -2,6 +2,9 @@ import Head from 'next/head'
 import React, { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 
+/**
+ * No-SSR version of the plotly Plot component
+ */
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false
 })
