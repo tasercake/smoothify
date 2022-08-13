@@ -35,6 +35,11 @@ const Home = () => {
     worker.onmessage = (event) => {
       setBestPath(event.data)
     }
+    return () => {
+      // Terminate worker & set worker ref to undefined
+      bestPathWorkerRef.current?.terminate()
+      bestPathWorkerRef.current = undefined
+    }
   }, [])
 
   // TSNE worker setup
@@ -46,6 +51,11 @@ const Home = () => {
     tsneWorkerRef.current = worker
     worker.onmessage = (event) => {
       setVisPoints(event.data)
+    }
+    return () => {
+      // Terminate worker & set worker ref to undefined
+      tsneWorkerRef.current?.terminate()
+      tsneWorkerRef.current = undefined
     }
   })
 
