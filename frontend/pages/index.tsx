@@ -1,5 +1,10 @@
 import Head from 'next/head'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false
+})
 
 const generateRandomPoints = (nPoints: number, nDims: number) => {
   return Array.from({ length: nPoints }, () =>
@@ -71,23 +76,20 @@ const Home = () => {
             </button>
           </>
         )}
+        <br />
         {visPoints && (
-          <>
-            <p>TSNE points</p>
-            <svg width={500} height={500}>
-              <g transform={`translate(${250}, ${250})`}>
-                {visPoints.map(([x, y], idx) => (
-                  <circle
-                    key={idx}
-                    cx={x * 250}
-                    cy={y * 250}
-                    r={1}
-                    fill="red"
-                  />
-                ))}
-              </g>
-            </svg>
-          </>
+          <Plot
+            data={[
+              {
+                x: visPoints.map(([x, _]) => x),
+                y: visPoints.map(([_, y]) => y),
+                type: 'scattergl',
+                mode: 'markers',
+                marker: { color: 'red' }
+              }
+            ]}
+            layout={{ width: 400, height: 400 }}
+          />
         )}
         {bestPath && (
           <>
