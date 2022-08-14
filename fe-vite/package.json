@@ -9,12 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/react": "^2.2.8",
+    "@emotion/react": "^11.10.0",
+    "@emotion/styled": "^11.10.0",
+    "@tensorflow/tfjs": "^3.19.0",
+    "@tensorflow/tfjs-tsne": "^0.2.0",
     "axios": "^0.27.2",
+    "framer-motion": "^7.1.0",
     "plotly.js": "^2.13.3",
+    "query-string": "^7.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-plotly.js": "^2.5.1",
-    "tsne-js": "^1.0.3"
+    "react-router-dom": "6",
+    "tsne-js": "^1.0.3",
+    "use-query-params": "^2.0.0"
   },
   "devDependencies": {
     "@types/plotly.js": "^2.12.2",

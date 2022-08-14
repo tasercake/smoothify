@@ -1,11 +1,11 @@
 // @ts-ignore (tsne-js doesn't have types)
-import TSNE from 'tsne-js'
+import TSNEjs from 'tsne-js'
 
-onmessage = (event) => {
-  console.log('tsne worker received event', event)
-  console.log('Computing tsne...')
-  const points = event.data
-  const model = new TSNE({
+/**
+ * Simple tsne-js implementation
+ */
+const tsnejsImplementation = (points: number[][]) => {
+  const model = new TSNEjs({
     dim: 2,
     perplexity: 32,
     earlyExaggeration: 4,
@@ -18,8 +18,17 @@ onmessage = (event) => {
     type: 'dense'
   })
   model.run()
-  console.log('tsne run finished')
-  const output = model.getOutputScaled()
+  return model.getOutputScaled()
+}
+
+/**
+ * Webworker entry point
+ */
+onmessage = (event: MessageEvent) => {
+  console.log('tsne worker received event', event)
+  console.log('Computing tsne...')
+  const points = event.data
+  const output = tsnejsImplementation(points)
   console.log('tsne output', output)
   postMessage(output)
 }
