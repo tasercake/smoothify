@@ -1,4 +1,3 @@
-import { ChakraProvider } from '@chakra-ui/react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
@@ -17,20 +16,18 @@ function App() {
           objectToSearchString: stringify
         }}
       >
-        <ChakraProvider>
-          <Routes>
-            <Route path="/" element={<HomePage />}></Route>
-            <Route
-              path="/login"
-              element={<SpotifyImplicitGrantLoginPage />}
-            ></Route>
-            <Route
-              path="/login-callback"
-              element={<SpotifyImplicitGrantCallbackPage />}
-            />
-            <Route path="/*" element={<h1>Not found</h1>} />
-          </Routes>
-        </ChakraProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />}></Route>
+          <Route
+            path="/login"
+            element={<SpotifyImplicitGrantLoginPage />}
+          ></Route>
+          <Route
+            path="/login-callback"
+            element={<SpotifyImplicitGrantCallbackPage />}
+          />
+          <Route path="/*" element={<h1>Not found</h1>} />
+        </Routes>
       </QueryParamProvider>
     </BrowserRouter>
   )

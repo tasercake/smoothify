@@ -106,13 +106,11 @@ const HomePage: React.FC = () => {
     }
   })
 
-  const loginButton = <Link to="/login">Login</Link>
-
   const authenticatedSection = (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'row' }}>
-        {loginButton}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div>Logged in!</div>
+        <Link to="/login">Login again</Link>
       </div>
       <button
         onClick={async () => {
@@ -131,14 +129,15 @@ const HomePage: React.FC = () => {
         Get songs
       </button>
       {songs && <p>Fetched {songs.length} songs</p>}
-    </>
+    </div>
   )
 
   return (
-    <>
-      <h1>Smoothify</h1>
-      {token ? authenticatedSection : loginButton}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <h1 className="text-3xl">Smoothify</h1>
+      {token ? authenticatedSection : <Link to="/login">Login</Link>}
       <button
+        className=""
         onClick={() => {
           const points = generateRandomPoints(N_POINTS, N_DIMS)
           setPoints(points)
@@ -148,7 +147,7 @@ const HomePage: React.FC = () => {
         Generate points
       </button>
       {points && (
-        <>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p>{points.length} datapoints</p>
           <button
             onClick={() => {
@@ -163,7 +162,7 @@ const HomePage: React.FC = () => {
           >
             Sort points
           </button>
-        </>
+        </div>
       )}
       <br />
       {visPoints && (
@@ -187,7 +186,7 @@ const HomePage: React.FC = () => {
           {bestPath.join(', ')}
         </>
       )}
-    </>
+    </div>
   )
 }
 export default HomePage
