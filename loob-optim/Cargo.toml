@@ -1,0 +1,10 @@
+[package]
+name = "loob-optim"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ndarray = { workspace = true }
+rand = "0.9"
+tracing = { workspace = true }
+serde = { workspace = true }
