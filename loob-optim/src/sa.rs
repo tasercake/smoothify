@@ -1,5 +1,8 @@
+//! Simulated annealing solver for asymmetric TSP.
+
 use crate::{DistanceMatrix, OptimError, Optimizer, Ordering, bottleneck_cost, mean_cost, total_cost, validate_matrix};
 use rand::Rng;
+use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,18 +27,29 @@ pub struct SimulatedAnnealing {
     pub initial_temp: f64,
     pub cooling_rate: f64,
     pub iterations: usize,
+    /// Optional seed for deterministic runs. None = random.
+    pub seed: Option<u64>,
 }
 
 impl Default for SimulatedAnnealing {
     fn default() -> Self {
-        Self { objective: AnnealingObjective::Hybrid { beta: 0.3 }, initial_temp: 100.0, cooling_rate: 0.9995, iterations: 100_000 }
+        Self {
+            objective: AnnealingObjective::Hybrid { beta: 0.3 },
+            initial_temp: 100.0,
+            cooling_rate: 0.9995,
+            iterations: 100_000,
+            seed: None,
+        }
     }
 }
 
 impl Optimizer for SimulatedAnnealing {
     fn optimize(&self, dist: &DistanceMatrix) -> Result<Ordering, OptimError> {
         let n = validate_matrix(dist)?;
-        let mut rng = rand::thread_rng();
+        let mut rng: Box<dyn rand::RngCore> = match self.seed {
+            Some(s) => Box::new(rand_chacha::ChaCha8Rng::seed_from_u64(s)),
+            None => Box::new(rand::thread_rng()),
+        };
         let mut current: Ordering = (0..n).collect();
         let mut current_cost = self.objective.cost(dist, &current);
         let mut best = current.clone();

@@ -10,7 +10,7 @@ use std::path::Path;
 pub async fn smooth(playlist_url: &str, config: &Config, provider: &dyn EmbeddingProvider, download_dir: &Path) -> Result<Vec<Track>, LoobError> {
     let playlist = loob_yt::fetch_playlist(playlist_url).await?;
     if playlist.videos.is_empty() { return Err(LoobError::EmptyPlaylist); }
-    eprintln!("Fetched "{}" - {} tracks", playlist.title, playlist.videos.len());
+    eprintln!("Fetched [{}] - {} tracks", playlist.title, playlist.videos.len());
     for video in &playlist.videos {
         eprintln!("Downloading: {}", video.title);
         loob_yt::download_audio(&video.url, &video.id, download_dir, AudioFormat::Wav).await?;
