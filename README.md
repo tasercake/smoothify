@@ -1,35 +1,40 @@
 # loob 🫧
 
-Reorder playlists for buttery-smooth transitions using real audio embeddings.
+Reorder playlists so tracks flow smoothly into each other.
 
-Feed it a YouTube playlist. It downloads the audio, runs each track through
-[MERT-330M](https://huggingface.co/m-a-p/MERT-v1-330M) for per-frame embeddings,
-then solves an asymmetric bottleneck TSP to find the smoothest listening order —
-matching the *end* of each track to the *beginning* of the next.
+Uses audio embeddings (MERT-330M) to compute per-frame representations of each track, then solves a directed TSP to minimize jarring transitions — weighting the *end* of one track against the *beginning* of the next.
 
-## Workspace
+## Architecture
 
-| Crate | Purpose |
-|-------|---------|
-| `loob-cli` | CLI frontend (`loob` binary) |
-| `loob-core` | Orchestration library (download → embed → optimize) |
-| `loob-optim` | Generic optimization algorithms (greedy NN, simulated annealing) |
-| `loob-yt` | YouTube playlist fetching & audio download via yt-dlp |
+```
+loob-cli          → CLI frontend (clap). No logic, just glue.
+loob-core         → Orchestration. Pulls everything together.
+loob-optim        → Optimization algorithms (greedy NN, simulated annealing).
+loob-yt           → YouTube interaction via yt-dlp.
+```
 
 ## Usage
 
 ```bash
-loob --playlist "https://www.youtube.com/playlist?list=PLxxxxx"
+# Reorder a YouTube playlist
+loob smooth "https://www.youtube.com/playlist?list=PLxxx"
+
+# Just inspect metadata
+loob inspect "https://www.youtube.com/playlist?list=PLxxx"
 ```
 
-## Tuning knobs
+## Tunable knobs
 
-- `--alpha` (0.6): weight on tail→head transition vs global track similarity
-- `--beta` (0.3): weight on worst-edge vs mean-edge in SA objective
-- `--window` (8.0): seconds for head/tail embedding windows
-- `--iterations` (500000): simulated annealing steps
+- `--alpha` (0.6): transition vs global embedding weight
+- `--beta` (0.3): bottleneck vs mean edge weight in SA objective  
+- `--window` (10.0): seconds for head/tail embedding windows
+- `--optimizer` (sa): `greedy` or `sa`
 
 ## Requirements
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- Python + MERT-330M sidecar (TBD)
+- Rust 2024 edition
+
+## License
+
+MIT

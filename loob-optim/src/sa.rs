@@ -1,97 +1,75 @@
-//! Simulated annealing solver for asymmetric TSP.
-
-use crate::CostFn;
+use crate::{DistanceMatrix, OptimError, Optimizer, Ordering, bottleneck_cost, mean_cost, total_cost, validate_matrix};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
-pub struct SaConfig {
-    /// Starting temperature.
-    pub t_start: f64,
-    /// Final temperature.
-    pub t_end: f64,
-    /// Number of iterations.
-    pub iterations: usize,
-    /// Weight on bottleneck (max edge) vs total cost.
-    /// objective = beta * max_edge + (1 - beta) * mean_edge
-    pub beta: f64,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AnnealingObjective {
+    Bottleneck,
+    Total,
+    Hybrid { beta: f64 },
 }
 
-impl Default for SaConfig {
+impl AnnealingObjective {
+    fn cost(&self, dist: &DistanceMatrix, order: &[usize]) -> f64 {
+        match self {
+            Self::Bottleneck => bottleneck_cost(dist, order),
+            Self::Total => total_cost(dist, order),
+            Self::Hybrid { beta } => {
+                beta * bottleneck_cost(dist, order) + (1.0 - beta) * mean_cost(dist, order)
+            }
+        }
+    }
+}
+
+pub struct SimulatedAnnealing {
+    pub objective: AnnealingObjective,
+    pub initial_temp: f64,
+    pub cooling_rate: f64,
+    pub iterations: usize,
+}
+
+impl Default for SimulatedAnnealing {
     fn default() -> Self {
         Self {
-            t_start: 1.0,
-            t_end: 1e-4,
-            iterations: 500_000,
-            beta: 0.3,
+            objective: AnnealingObjective::Hybrid { beta: 0.3 },
+            initial_temp: 100.0,
+            cooling_rate: 0.9995,
+            iterations: 100_000,
         }
     }
 }
 
-pub struct SaResult {
-    pub path: Vec<usize>,
-    pub max_edge: f64,
-    pub total_cost: f64,
-}
+impl Optimizer for SimulatedAnnealing {
+    fn optimize(&self, dist: &DistanceMatrix) -> Result<Ordering, OptimError> {
+        let n = validate_matrix(dist)?;
+        let mut rng = rand::thread_rng();
+        let mut current: Ordering = (0..n).collect();
+        let mut current_cost = self.objective.cost(dist, &current);
+        let mut best = current.clone();
+        let mut best_cost = current_cost;
+        let mut temp = self.initial_temp;
 
-pub fn solve(cost: &impl CostFn, initial_path: Vec<usize>, config: &SaConfig) -> SaResult {
-    let n = initial_path.len();
-    if n < 3 {
-        return SaResult {
-            path: initial_path,
-            max_edge: 0.0,
-            total_cost: 0.0,
-        };
-    }
+        for _ in 0..self.iterations {
+            let i = rng.r#gen_range(0..n);
+            let j = rng.r#gen_range(0..n);
+            let (lo, hi) = if i < j { (i, j) } else { (j, i) };
+            if lo == hi { continue; }
 
-    let mut rng = rand::rng();
-    let mut path = initial_path;
-    let mut current_obj = objective(cost, &path, config.beta);
+            current[lo..=hi].reverse();
+            let new_cost = self.objective.cost(dist, &current);
+            let delta = new_cost - current_cost;
 
-    let mut best_path = path.clone();
-    let mut best_obj = current_obj;
-
-    let cooling = (config.t_end / config.t_start).ln() / config.iterations as f64;
-
-    for i in 0..config.iterations {
-        let t = config.t_start * (cooling * i as f64).exp();
-
-        // 2-opt reversal
-        let a = rng.random_range(0..n);
-        let b = rng.random_range(0..n);
-        let (lo, hi) = if a < b { (a, b) } else { (b, a) };
-        if lo == hi { continue; }
-
-        path[lo..=hi].reverse();
-        let new_obj = objective(cost, &path, config.beta);
-        let delta = new_obj - current_obj;
-
-        if delta < 0.0 || rng.random::<f64>() < (-delta / t).exp() {
-            current_obj = new_obj;
-            if current_obj < best_obj {
-                best_obj = current_obj;
-                best_path = path.clone();
+            if delta < 0.0 || rng.r#gen::<f64>() < (-delta / temp).exp() {
+                current_cost = new_cost;
+                if current_cost < best_cost {
+                    best = current.clone();
+                    best_cost = current_cost;
+                }
+            } else {
+                current[lo..=hi].reverse();
             }
-        } else {
-            path[lo..=hi].reverse(); // revert
+            temp *= self.cooling_rate;
         }
+        Ok(best)
     }
-
-    let (max_edge, total_cost) = path_stats(cost, &best_path);
-    SaResult { path: best_path, max_edge, total_cost }
-}
-
-fn objective(cost: &impl CostFn, path: &[usize], beta: f64) -> f64 {
-    let (max_edge, total_cost) = path_stats(cost, path);
-    let mean_edge = total_cost / (path.len().saturating_sub(1).max(1)) as f64;
-    beta * max_edge + (1.0 - beta) * mean_edge
-}
-
-fn path_stats(cost: &impl CostFn, path: &[usize]) -> (f64, f64) {
-    let mut max_edge: f64 = 0.0;
-    let mut total: f64 = 0.0;
-    for w in path.windows(2) {
-        let c = cost.cost(w[0], w[1]);
-        max_edge = max_edge.max(c);
-        total += c;
-    }
-    (max_edge, total)
 }

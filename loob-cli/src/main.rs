@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(name = "loob", about = "Reorder playlists for smooth transitions using audio embeddings")]
@@ -32,10 +31,6 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-
     let cli = Cli::parse();
 
     let config = loob_core::LoobConfig {

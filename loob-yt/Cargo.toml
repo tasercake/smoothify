@@ -1,11 +1,11 @@
 [package]
 name = "loob-yt"
-version.workspace = true
 edition.workspace = true
+version.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tracing = { workspace = true }
+thiserror = { workspace = true }

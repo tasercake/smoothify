@@ -2,10 +2,8 @@
 
 use anyhow::Result;
 use loob_optim::{AsymmetricCostMatrix, greedy, sa};
-use loob_yt::download::Downloader;
+use loob_yt::download::{self, AudioFormat};
 use loob_yt::playlist;
-use ndarray::Array1;
-use tracing::info;
 
 use crate::embed::AudioEmbedder;
 use crate::types::{LoobConfig, Track, TrackEmbedding};
@@ -24,30 +22,31 @@ impl LoobPipeline {
     pub async fn run(
         &self,
         playlist_url: &str,
-        embedder: &impl AudioEmbedder,
+        embedder: &dyn AudioEmbedder,
         download_dir: &std::path::Path,
     ) -> Result<Vec<Track>> {
         // 1. Fetch playlist
-        info!("fetching playlist metadata...");
         let playlist = playlist::fetch_playlist(playlist_url).await?;
-        let tracks: Vec<Track> = playlist.entries.iter().map(|e| Track {
-            id: e.id.clone(),
-            title: e.title.clone().unwrap_or_else(|| e.id.clone()),
-            source_url: e.url.clone(),
-            duration_secs: e.duration,
+        let tracks: Vec<Track> = playlist.videos.iter().map(|v| Track {
+            id: v.id.clone(),
+            title: v.title.clone(),
+            source_url: v.url.clone(),
+            duration_secs: Some(v.duration),
         }).collect();
-        info!(count = tracks.len(), "found tracks");
 
         // 2. Download audio
-        let downloader = Downloader::new(download_dir);
         let mut audio_paths = Vec::new();
         for track in &tracks {
-            let path = downloader.download_audio(&track.id).await?;
+            let path = download::download_audio(
+                &track.source_url,
+                &track.id,
+                download_dir,
+                AudioFormat::Wav,
+            ).await?;
             audio_paths.push(path);
         }
 
         // 3. Embed
-        info!("embedding tracks...");
         let mut embeddings = Vec::new();
         for path in &audio_paths {
             let frames = embedder.embed(path).await?;
@@ -62,7 +61,6 @@ impl LoobPipeline {
         });
 
         // 5. Optimize
-        info!("optimizing track order...");
         let greedy_result = greedy::solve_all_starts(&cost);
         let sa_config = sa::SaConfig {
             iterations: self.config.sa_iterations,
@@ -70,7 +68,6 @@ impl LoobPipeline {
             ..Default::default()
         };
         let result = sa::solve(&cost, greedy_result.path, &sa_config);
-        info!(max_edge = result.max_edge, total = result.total_cost, "optimization complete");
 
         // 6. Reorder
         let reordered = result.path.into_iter().map(|i| tracks[i].clone()).collect();

@@ -3,10 +3,9 @@ members = ["loob-cli", "loob-core", "loob-optim", "loob-yt"]
 resolver = "2"
 
 [workspace.package]
+edition = "2021"
 version = "0.1.0"
-edition = "2024"
 license = "MIT"
-repository = "https://github.com/tasercake/smoothify"
 
 [workspace.dependencies]
 loob-core = { path = "loob-core" }
@@ -14,10 +13,10 @@ loob-optim = { path = "loob-optim" }
 loob-yt = { path = "loob-yt" }
 anyhow = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-clap = { version = "4", features = ["derive"] }
+rand = "0.8"
 ndarray = "0.16"
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+async-trait = "0.1"
