@@ -1,5 +1,6 @@
 use crate::track::Track;
 use std::path::Path;
+use rand::Rng;
 
 pub trait EmbeddingProvider {
     fn embed(&self, audio_path: &Path, head_seconds: f64, tail_seconds: f64) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String>;
@@ -13,9 +14,8 @@ impl Default for RandomEmbeddingProvider {
 
 impl EmbeddingProvider for RandomEmbeddingProvider {
     fn embed(&self, _audio_path: &Path, _head_seconds: f64, _tail_seconds: f64) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
-        use rand::Rng;
         let mut rng = rand::thread_rng();
-        let make_vec = || (0..self.dims).map(|_| rng.r#gen::<f64>()).collect::<Vec<_>>();
+        let mut make_vec = || (0..self.dims).map(|_| rng.gen::<f64>()).collect::<Vec<_>>();
         Ok((make_vec(), make_vec(), make_vec()))
     }
 }

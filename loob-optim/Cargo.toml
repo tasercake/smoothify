@@ -4,6 +4,6 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
-ndarray = { workspace = true }
 rand = { workspace = true }
+thiserror = { workspace = true }
 serde = { workspace = true }

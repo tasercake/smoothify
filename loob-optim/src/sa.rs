@@ -14,9 +14,7 @@ impl AnnealingObjective {
         match self {
             Self::Bottleneck => bottleneck_cost(dist, order),
             Self::Total => total_cost(dist, order),
-            Self::Hybrid { beta } => {
-                beta * bottleneck_cost(dist, order) + (1.0 - beta) * mean_cost(dist, order)
-            }
+            Self::Hybrid { beta } => beta * bottleneck_cost(dist, order) + (1.0 - beta) * mean_cost(dist, order),
         }
     }
 }
@@ -30,12 +28,7 @@ pub struct SimulatedAnnealing {
 
 impl Default for SimulatedAnnealing {
     fn default() -> Self {
-        Self {
-            objective: AnnealingObjective::Hybrid { beta: 0.3 },
-            initial_temp: 100.0,
-            cooling_rate: 0.9995,
-            iterations: 100_000,
-        }
+        Self { objective: AnnealingObjective::Hybrid { beta: 0.3 }, initial_temp: 100.0, cooling_rate: 0.9995, iterations: 100_000 }
     }
 }
 
@@ -48,23 +41,17 @@ impl Optimizer for SimulatedAnnealing {
         let mut best = current.clone();
         let mut best_cost = current_cost;
         let mut temp = self.initial_temp;
-
         for _ in 0..self.iterations {
-            let i = rng.r#gen_range(0..n);
-            let j = rng.r#gen_range(0..n);
+            let i = rng.gen_range(0..n);
+            let j = rng.gen_range(0..n);
             let (lo, hi) = if i < j { (i, j) } else { (j, i) };
             if lo == hi { continue; }
-
             current[lo..=hi].reverse();
             let new_cost = self.objective.cost(dist, &current);
             let delta = new_cost - current_cost;
-
-            if delta < 0.0 || rng.r#gen::<f64>() < (-delta / temp).exp() {
+            if delta < 0.0 || rng.gen::<f64>() < (-delta / temp).exp() {
                 current_cost = new_cost;
-                if current_cost < best_cost {
-                    best = current.clone();
-                    best_cost = current_cost;
-                }
+                if current_cost < best_cost { best = current.clone(); best_cost = current_cost; }
             } else {
                 current[lo..=hi].reverse();
             }
