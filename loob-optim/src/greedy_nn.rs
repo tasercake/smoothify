@@ -1,4 +1,4 @@
-use crate::{DistanceMatrix, OptimError, Optimizer, Ordering, bottleneck_cost, validate_matrix};
+use crate::{bottleneck_cost, validate_matrix, DistanceMatrix, OptimError, Optimizer, Ordering};
 
 pub struct GreedyNn;
 
@@ -10,7 +10,10 @@ impl Optimizer for GreedyNn {
         for start in 0..n {
             let order = greedy_from(dist, n, start);
             let cost = bottleneck_cost(dist, &order);
-            if cost < best_cost { best_cost = cost; best_order = Some(order); }
+            if cost < best_cost {
+                best_cost = cost;
+                best_order = Some(order);
+            }
         }
         Ok(best_order.unwrap())
     }
@@ -26,7 +29,10 @@ fn greedy_from(dist: &DistanceMatrix, n: usize, start: usize) -> Ordering {
         let mut best_next = 0;
         let mut best_dist = f64::INFINITY;
         for j in 0..n {
-            if !visited[j] && dist[current][j] < best_dist { best_dist = dist[current][j]; best_next = j; }
+            if !visited[j] && dist[current][j] < best_dist {
+                best_dist = dist[current][j];
+                best_next = j;
+            }
         }
         visited[best_next] = true;
         order.push(best_next);

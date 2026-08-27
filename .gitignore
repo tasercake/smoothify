@@ -1,4 +1,15 @@
 /target
-*.wav
-*.mp3
+/loob-tauri/gen/schemas
+/.loob-cache
+/**/.loob-cache
+/downloads
+/**/*.wav
+/**/*.mp3
+/**/*.flac
+/**/*.m4a
+/**/*.aac
+/**/*.ogg
+*.part
+*.ytdl
+yt-dlp.archive
 .env

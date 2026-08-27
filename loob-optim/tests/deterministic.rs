@@ -1,10 +1,12 @@
 use loob_optim::*;
 
 fn identity_matrix(n: usize) -> DistanceMatrix {
-    let m = vec![vec![0.0; n]; n];
-    for i in 0..n {
-        for j in 0..n {
-            if i != j { m[i][j] = 1.0; }
+    let mut m = vec![vec![0.0; n]; n];
+    for (i, row) in m.iter_mut().enumerate() {
+        for (j, value) in row.iter_mut().enumerate() {
+            if i != j {
+                *value = 1.0;
+            }
         }
     }
     m
@@ -13,9 +15,9 @@ fn identity_matrix(n: usize) -> DistanceMatrix {
 /// A simple asymmetric chain: 0→1→2→3 is cheap, everything else is expensive.
 fn chain_matrix() -> DistanceMatrix {
     let n = 4;
-    let m = vec![vec![10.0; n]; n];
-    for i in 0..n {
-        m[i][i] = 0.0;
+    let mut m = vec![vec![10.0; n]; n];
+    for (i, row) in m.iter_mut().enumerate() {
+        row[i] = 0.0;
     }
     // Cheap forward edges: 0→1, 1→2, 2→3
     m[0][1] = 1.0;
@@ -31,8 +33,10 @@ fn chain_matrix() -> DistanceMatrix {
 /// Asymmetric ring: 0→1→2→3→0 is the optimal tour.
 fn ring_matrix() -> DistanceMatrix {
     let n = 4;
-    let m = vec![vec![100.0; n]; n];
-    for i in 0..n { m[i][i] = 0.0; }
+    let mut m = vec![vec![100.0; n]; n];
+    for (i, row) in m.iter_mut().enumerate() {
+        row[i] = 0.0;
+    }
     m[0][1] = 1.0;
     m[1][2] = 2.0;
     m[2][3] = 1.0;
@@ -56,7 +60,10 @@ fn empty_matrix_errors() {
 #[test]
 fn non_square_matrix_errors() {
     let m = vec![vec![0.0, 1.0], vec![1.0]];
-    assert!(matches!(validate_matrix(&m), Err(OptimError::NotSquare { .. })));
+    assert!(matches!(
+        validate_matrix(&m),
+        Err(OptimError::NotSquare { .. })
+    ));
 }
 
 #[test]
@@ -92,7 +99,7 @@ fn mean_cost_averages() {
 #[test]
 fn single_node_costs_are_zero() {
     let m = identity_matrix(1);
-    assert_eq!(bottleneck_cost(&m, &[0]), f64::NEG_INFINITY); // no edges
+    assert_eq!(bottleneck_cost(&m, &[0]), 0.0); // no edges
     assert_eq!(total_cost(&m, &[0]), 0.0);
     assert_eq!(mean_cost(&m, &[0]), 0.0);
 }
@@ -158,12 +165,26 @@ fn sa_different_seeds_may_differ() {
         vec![3.0, 7.0, 2.0, 9.0, 0.0, 8.0],
         vec![6.0, 4.0, 1.0, 5.0, 3.0, 0.0],
     ];
-    let r1 = SimulatedAnnealing { seed: Some(1), iterations: 50_000, ..Default::default() }.optimize(&m).unwrap();
-    let r2 = SimulatedAnnealing { seed: Some(999), iterations: 50_000, ..Default::default() }.optimize(&m).unwrap();
+    let r1 = SimulatedAnnealing {
+        seed: Some(1),
+        iterations: 50_000,
+        ..Default::default()
+    }
+    .optimize(&m)
+    .unwrap();
+    let r2 = SimulatedAnnealing {
+        seed: Some(999),
+        iterations: 50_000,
+        ..Default::default()
+    }
+    .optimize(&m)
+    .unwrap();
     // Not guaranteed to differ, but with different seeds on a complex matrix they usually will.
     // At minimum, both must be valid permutations.
-    let mut s1 = r1.clone(); s1.sort();
-    let mut s2 = r2.clone(); s2.sort();
+    let mut s1 = r1.clone();
+    s1.sort();
+    let mut s2 = r2.clone();
+    s2.sort();
     assert_eq!(s1, vec![0, 1, 2, 3, 4, 5]);
     assert_eq!(s2, vec![0, 1, 2, 3, 4, 5]);
 }
@@ -176,7 +197,9 @@ fn sa_finds_optimal_chain() {
         iterations: 50_000,
         objective: AnnealingObjective::Bottleneck,
         ..Default::default()
-    }.optimize(&m).unwrap();
+    }
+    .optimize(&m)
+    .unwrap();
     // Optimal path is 0→1→2→3 with bottleneck 1.0
     assert_eq!(bottleneck_cost(&m, &result), 1.0);
     assert_eq!(result, vec![0, 1, 2, 3]);
@@ -190,7 +213,9 @@ fn sa_respects_asymmetry() {
         iterations: 50_000,
         objective: AnnealingObjective::Bottleneck,
         ..Default::default()
-    }.optimize(&m).unwrap();
+    }
+    .optimize(&m)
+    .unwrap();
     // Forward ring has bottleneck 2.0, reverse has 50.0
     assert!(bottleneck_cost(&m, &result) <= 2.0);
 }
@@ -198,14 +223,26 @@ fn sa_respects_asymmetry() {
 #[test]
 fn sa_single_node() {
     let m = vec![vec![0.0]];
-    let result = SimulatedAnnealing { seed: Some(0), iterations: 100, ..Default::default() }.optimize(&m).unwrap();
+    let result = SimulatedAnnealing {
+        seed: Some(0),
+        iterations: 100,
+        ..Default::default()
+    }
+    .optimize(&m)
+    .unwrap();
     assert_eq!(result, vec![0]);
 }
 
 #[test]
 fn sa_two_nodes() {
     let m = vec![vec![0.0, 5.0], vec![3.0, 0.0]];
-    let result = SimulatedAnnealing { seed: Some(0), iterations: 1000, ..Default::default() }.optimize(&m).unwrap();
+    let result = SimulatedAnnealing {
+        seed: Some(0),
+        iterations: 1000,
+        ..Default::default()
+    }
+    .optimize(&m)
+    .unwrap();
     // Only two possible orderings, both valid
     assert!(result == vec![0, 1] || result == vec![1, 0]);
 }
@@ -226,15 +263,24 @@ fn asymmetric_distance_is_directional() {
     let alpha = 0.6;
 
     // d(A→B): alpha * dist(tail_a, head_b) + (1-alpha) * dist(global_a, global_b)
-    let d_ab = alpha * euclidean(&tail_a, &head_b) + (1.0 - alpha) * euclidean(&global_a, &global_b);
+    let d_ab =
+        alpha * euclidean(&tail_a, &head_b) + (1.0 - alpha) * euclidean(&global_a, &global_b);
     // d(B→A): alpha * dist(tail_b, head_a) + (1-alpha) * dist(global_b, global_a)
-    let d_ba = alpha * euclidean(&tail_b, &head_a) + (1.0 - alpha) * euclidean(&global_b, &global_a);
+    let d_ba =
+        alpha * euclidean(&tail_b, &head_a) + (1.0 - alpha) * euclidean(&global_b, &global_a);
 
     // tail_a == head_b, so transition A→B is 0. But tail_b ≠ head_a.
-    assert!(d_ab < d_ba, "A→B should be cheaper since tail_a matches head_b");
+    assert!(
+        d_ab < d_ba,
+        "A→B should be cheaper since tail_a matches head_b"
+    );
     assert!((d_ab - (1.0 - alpha) * euclidean(&global_a, &global_b)).abs() < 1e-10);
 }
 
 fn euclidean(a: &[f64], b: &[f64]) -> f64 {
-    a.iter().zip(b).map(|(x, y)| (x - y).powi(2)).sum::<f64>().sqrt()
+    a.iter()
+        .zip(b)
+        .map(|(x, y)| (x - y).powi(2))
+        .sum::<f64>()
+        .sqrt()
 }

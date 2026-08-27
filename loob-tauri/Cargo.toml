@@ -1,0 +1,24 @@
+[package]
+name = "loob-tauri"
+edition.workspace = true
+version.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+loob-core = { workspace = true }
+loob-yt = { workspace = true }
+bytes = "1"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+rand = { workspace = true }
+serde = { workspace = true }
+sha2 = { workspace = true }
+tauri = { version = "2", features = [] }
+tokio = { version = "1", features = ["macros", "net", "rt", "sync"] }
+rfd = "0.15"
+
+[dev-dependencies]
+tempfile = { workspace = true }

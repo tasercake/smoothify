@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>loob</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">LOCAL AUDIO · DSP ONLY</p>
+    <h1>Make the next track feel inevitable.</h1>
+    <p class="lede">Choose local audio or enter a YouTube playlist. loob analyzes intros, outros, loudness, spectrum, onsets, and pitch class locally, then minimizes the worst adjacent transition.</p>
+    <section class="source-card">
+      <h2>Local audio</h2>
+      <div class="controls">
+        <button id="choose">Choose audio files</button>
+        <button id="run" class="secondary" disabled>Find smoothest order</button>
+      </div>
+      <p id="selection">No files selected.</p>
+    </section>
+    <div class="divider"><span>or</span></div>
+    <form id="youtube-form" class="source-card">
+      <label for="youtube-url">YouTube playlist URL</label>
+      <div class="url-controls">
+        <input id="youtube-url" name="youtube-url" type="url" inputmode="url" placeholder="https://www.youtube.com/playlist?list=…" required>
+        <button id="youtube-run" type="submit">Cache &amp; optimize playlist</button>
+      </div>
+      <p class="hint">Submitting explicitly permits downloads for missing tracks. Cached audio and DSP results are reused; nothing refreshes automatically.</p>
+    </form>
+    <progress id="progress" value="0" max="1"></progress>
+    <p id="status" aria-live="polite">Ready.</p>
+    <section class="player" aria-label="Playlist player">
+      <audio id="audio" preload="metadata"></audio>
+      <p class="player-label">Now playing</p>
+      <h2 id="now-playing">No optimized playlist yet</h2>
+      <div class="player-controls">
+        <button id="previous" class="secondary player-button" type="button" disabled>Previous</button>
+        <button id="play-pause" class="player-button" type="button" disabled>Play</button>
+        <button id="next" class="secondary player-button" type="button" disabled>Next</button>
+      </div>
+      <div class="seek-row">
+        <span id="elapsed">0:00</span>
+        <input id="seek" class="seek" type="range" min="0" max="0" value="0" step="0.1" disabled aria-label="Seek through current track">
+        <span id="duration">0:00</span>
+      </div>
+      <p id="playback-status" class="hint" aria-live="polite">Optimize a playlist to enable playback.</p>
+    </section>
+    <h2 id="results-heading">Optimized order</h2>
+    <ol id="results"></ol>
+    <section id="skipped-section" hidden>
+      <h2>Skipped tracks</h2>
+      <ul id="skipped"></ul>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

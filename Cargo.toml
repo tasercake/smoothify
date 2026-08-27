@@ -1,5 +1,5 @@
 [workspace]
-members = ["loob-cli", "loob-core", "loob-optim", "loob-yt"]
+members = ["loob-cli", "loob-core", "loob-optim", "loob-tauri", "loob-yt"]
 resolver = "2"
 
 [workspace.package]
@@ -19,3 +19,10 @@ rand = "0.8"
 rand_chacha = "0.3"
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive"] }
+fs2 = "0.4"
+atomicwrites = "0.4"
+rustfft = "6"
+sha2 = "0.10"
+symphonia = { version = "0.5", features = ["aac", "alac", "flac", "isomp4", "mp3", "ogg", "pcm", "vorbis", "wav"] }
+tempfile = "3"
+url = "2"
