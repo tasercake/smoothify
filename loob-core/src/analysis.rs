@@ -1,4 +1,4 @@
-use crate::{DspSummary, TrackAnalysis};
+use crate::{DspChunk, DspSummary, TrackAnalysis};
 use rustfft::{num_complex::Complex, FftPlanner};
 use sha2::{Digest, Sha256};
 use std::{fs::File, io::Read, path::Path};
@@ -12,13 +12,15 @@ use symphonia::core::{
     probe::Hint,
 };
 
-pub const ANALYSIS_PIPELINE_VERSION: &str = "dsp-v1-fft2048-hop1024";
+pub const ANALYSIS_PIPELINE_VERSION: &str = "dsp-v2-chunks10s-overlap1s-fft2048-hop1024";
+pub const CHUNK_SECONDS: f64 = 10.0;
+pub const CHUNK_OVERLAP_SECONDS: f64 = 1.0;
 const FFT_SIZE: usize = 2048;
 const BASE_HOP: usize = 1024;
 const MAX_GLOBAL_FRAMES: usize = 4096;
 
-pub fn analysis_fingerprint(intro_seconds: f64, outro_seconds: f64) -> String {
-    format!("{ANALYSIS_PIPELINE_VERSION}-intro-{intro_seconds:.3}-outro-{outro_seconds:.3}")
+pub fn analysis_fingerprint() -> String {
+    ANALYSIS_PIPELINE_VERSION.to_string()
 }
 
 pub fn hash_file(path: &Path) -> Result<String, String> {
@@ -35,34 +37,71 @@ pub fn hash_file(path: &Path) -> Result<String, String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-pub fn analyze_audio(
-    path: &Path,
-    intro_seconds: f64,
-    outro_seconds: f64,
-) -> Result<TrackAnalysis, String> {
+pub fn analyze_audio(path: &Path) -> Result<TrackAnalysis, String> {
     let content_sha256 = hash_file(path)?;
+    analyze_audio_with_hash(path, &content_sha256)
+}
+
+/// Analyze audio whose content identity was already established by a trusted
+/// content-addressed cache. This avoids an otherwise redundant full-file pass.
+pub fn analyze_audio_with_hash(path: &Path, content_sha256: &str) -> Result<TrackAnalysis, String> {
     let (samples, sample_rate) = decode_mono(path)?;
     if samples.is_empty() {
         return Err("decoded audio contains no samples".into());
     }
     let duration_seconds = samples.len() as f64 / sample_rate as f64;
-    let intro_len = ((intro_seconds * sample_rate as f64) as usize).clamp(1, samples.len());
-    let outro_len = ((outro_seconds * sample_rate as f64) as usize).clamp(1, samples.len());
+    let chunks = chunk_sample_ranges(samples.len(), sample_rate)
+        .into_iter()
+        .map(|range| DspChunk {
+            start_seconds: range.start as f64 / sample_rate as f64,
+            end_seconds: range.end as f64 / sample_rate as f64,
+            summary: summarize(&samples[range], sample_rate, BASE_HOP),
+        })
+        .collect();
 
     Ok(TrackAnalysis {
         pipeline_version: ANALYSIS_PIPELINE_VERSION.into(),
-        analysis_fingerprint: analysis_fingerprint(intro_seconds, outro_seconds),
-        content_sha256,
+        analysis_fingerprint: analysis_fingerprint(),
+        content_sha256: content_sha256.to_string(),
         sample_rate,
         duration_seconds,
-        intro: summarize(&samples[..intro_len], sample_rate, BASE_HOP),
-        outro: summarize(&samples[samples.len() - outro_len..], sample_rate, BASE_HOP),
+        chunks,
         whole: summarize(
             &samples,
             sample_rate,
             (samples.len() / MAX_GLOBAL_FRAMES).max(BASE_HOP),
         ),
     })
+}
+
+fn chunk_sample_ranges(sample_count: usize, sample_rate: u32) -> Vec<std::ops::Range<usize>> {
+    debug_assert!(sample_count > 0);
+    debug_assert!(sample_rate > 0);
+    let window_samples = (CHUNK_SECONDS * sample_rate as f64).round() as usize;
+    let hop_samples =
+        ((CHUNK_SECONDS - CHUNK_OVERLAP_SECONDS) * sample_rate as f64).round() as usize;
+    let window_samples = window_samples.max(1);
+    let hop_samples = hop_samples.max(1);
+
+    if sample_count <= window_samples {
+        return vec![0..sample_count];
+    }
+
+    let final_start = sample_count - window_samples;
+    let mut starts = vec![0];
+    let mut start = hop_samples;
+    while start < final_start {
+        starts.push(start);
+        start = start.saturating_add(hop_samples);
+    }
+    if starts.last().copied() != Some(final_start) {
+        starts.push(final_start);
+    }
+
+    starts
+        .into_iter()
+        .map(|start| start..start + window_samples)
+        .collect()
 }
 
 fn decode_mono(path: &Path) -> Result<(Vec<f32>, u32), String> {
@@ -241,5 +280,33 @@ fn summarize(samples: &[f32], sample_rate: u32, hop: usize) -> DspSummary {
         zero_crossing_rate: zcr_sum / n,
         onset_density: onsets / analyzed_seconds,
         chroma,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chunk_sample_ranges;
+
+    #[test]
+    fn short_track_has_one_partial_chunk_covering_the_track() {
+        assert_eq!(chunk_sample_ranges(73, 10), vec![0..73]);
+        assert_eq!(chunk_sample_ranges(100, 10), vec![0..100]);
+    }
+
+    #[test]
+    fn chunks_use_nine_second_hops_and_an_end_anchored_final_window() {
+        assert_eq!(
+            chunk_sample_ranges(250, 10),
+            vec![0..100, 90..190, 150..250]
+        );
+        assert_eq!(
+            chunk_sample_ranges(280, 10),
+            vec![0..100, 90..190, 180..280]
+        );
+    }
+
+    #[test]
+    fn aligned_final_window_is_not_duplicated() {
+        assert_eq!(chunk_sample_ranges(190, 10), vec![0..100, 90..190]);
     }
 }

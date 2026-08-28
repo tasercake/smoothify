@@ -2261,6 +2261,7 @@ name = "loob-tauri"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "futures-util",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -2274,6 +2275,7 @@ dependencies = [
  "tauri-build",
  "tempfile",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

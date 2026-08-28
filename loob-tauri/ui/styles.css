@@ -18,6 +18,12 @@ input:focus { outline: 2px solid #8be0bd; outline-offset: 2px; }
 .hint { margin-bottom: 0; color: #8b908d; font-size: .85rem; line-height: 1.5; }
 progress { width: 100%; margin-top: 28px; accent-color: #8be0bd; }
 #selection, #status { color: #b8bbb7; }
+.progress-summary { min-height: 1.3em; margin: -8px 0 0; color: #8be0bd; font-size: .88rem; }
+.active-work { margin-top: 12px; padding: 12px 16px; border: 1px solid #2a2e31; border-radius: 12px; background: #111519; }
+.active-work h2 { margin: 0 0 8px; color: #8b908d; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+.active-work ul { margin: 0; padding: 0; list-style: none; }
+.active-work li { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; color: #b8bbb7; font-size: .85rem; }
+.task-state { flex: 0 0 auto; color: #8b908d; }
 #results-heading { margin: 32px 0 0; font-size: 1rem; }
 #results { margin-top: 28px; padding-left: 28px; }
 #results li { border-bottom: 1px solid #2a2e31; padding: 12px 8px; }

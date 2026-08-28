@@ -1,6 +1,35 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AudioFormat {
+    M4a,
+    Wav,
+}
+
+impl AudioFormat {
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::M4a => "m4a",
+            Self::Wav => "wav",
+        }
+    }
+
+    pub fn content_type(self) -> &'static str {
+        match self {
+            Self::M4a => "audio/mp4",
+            Self::Wav => "audio/wav",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FileFingerprint {
+    pub byte_size: u64,
+    pub modified_unix_nanos: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VideoInfo {
     pub id: String,
@@ -31,6 +60,13 @@ pub struct AudioProvenance {
     /// Relative content-addressed path below the cache's audio directory.
     pub object_file: String,
     pub downloaded_unix_seconds: u64,
+    /// Added in v2. Missing values identify a readable legacy WAV reference.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format: Option<AudioFormat>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprint: Option<FileFingerprint>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -68,6 +104,17 @@ pub struct PreparedAudioTrack {
     pub title: String,
     pub path: PathBuf,
     pub was_cached: bool,
+    pub content_sha256: String,
+    pub format: AudioFormat,
+    pub byte_size: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreparedAudio {
+    pub path: PathBuf,
+    pub content_sha256: String,
+    pub format: AudioFormat,
+    pub byte_size: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,18 +142,21 @@ pub enum YoutubeProgress {
         was_cached: bool,
     },
     ResolvingAudio {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
     },
     AudioReady {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
         was_cached: bool,
     },
     AudioSkipped {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
         reason: UnavailabilityReason,

@@ -22,6 +22,9 @@ struct FakeBackend {
     vary_downloads: bool,
     playlist_ids: Arc<Mutex<Vec<String>>>,
     unavailable_ids: Arc<Mutex<HashSet<String>>>,
+    m4a: bool,
+    active_downloads: Arc<AtomicUsize>,
+    max_active_downloads: Arc<AtomicUsize>,
 }
 
 impl YtDlpBackend for FakeBackend {
@@ -44,13 +47,23 @@ impl YtDlpBackend for FakeBackend {
         })
     }
 
-    fn download_wav(
+    fn download_audio(
         &self,
         video: &VideoInfo,
         staging_dir: &Path,
         archive: Option<&Path>,
-    ) -> Result<PathBuf, YtError> {
+    ) -> Result<DownloadedAudio, YtError> {
         let download_number = self.downloads.fetch_add(1, Ordering::SeqCst) + 1;
+        let active = self.active_downloads.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max_active_downloads
+            .fetch_max(active, Ordering::SeqCst);
+        struct ActiveGuard<'a>(&'a AtomicUsize);
+        impl Drop for ActiveGuard<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+        let _active = ActiveGuard(&self.active_downloads);
         if let Some(archive) = archive {
             self.archive_paths
                 .lock()
@@ -72,7 +85,12 @@ impl YtDlpBackend for FakeBackend {
             return Err(YtError::ArchiveSkippedMissing(video.id.clone()));
         }
         fs::create_dir_all(staging_dir)?;
-        let path = staging_dir.join(format!("{}.wav", video.id));
+        let format = if self.m4a {
+            AudioFormat::M4a
+        } else {
+            AudioFormat::Wav
+        };
+        let path = staging_dir.join(format!("{}.{}", video.id, format.extension()));
         write_fake_wav(
             &path,
             video,
@@ -82,7 +100,7 @@ impl YtDlpBackend for FakeBackend {
                 0
             },
         )?;
-        Ok(path)
+        Ok(DownloadedAudio { path, format })
     }
 }
 
@@ -222,6 +240,13 @@ fn refresh_retries_a_negative_audio_reference() {
             ..
         })
     ));
+    assert!(matches!(
+        cache.verify_audio(&item),
+        Err(YtError::VideoUnavailable {
+            was_cached: true,
+            ..
+        })
+    ));
     assert_eq!(downloads.load(Ordering::SeqCst), 1);
     unavailable_ids.lock().unwrap().remove("gone");
     let refreshed = cache.audio(&item, CachePolicy::Refresh).unwrap();
@@ -234,7 +259,9 @@ fn refresh_retries_a_negative_audio_reference() {
 fn generic_downloader_failure_still_aborts_playlist_orchestration() {
     let dir = tempfile::tempdir().unwrap();
     let backend = FakeBackend {
-        playlist_ids: Arc::new(Mutex::new(vec!["usable".into(), "fails".into()])),
+        playlist_ids: Arc::new(Mutex::new(
+            (0..20).map(|index| format!("fails_{index}")).collect(),
+        )),
         generic_failure: true,
         ..Default::default()
     };
@@ -248,7 +275,7 @@ fn generic_downloader_failure_still_aborts_playlist_orchestration() {
         ),
         Err(YtError::YtDlpFailed(_))
     ));
-    assert_eq!(downloads.load(Ordering::SeqCst), 1);
+    assert!((1..=3).contains(&downloads.load(Ordering::SeqCst)));
 }
 
 #[test]
@@ -405,12 +432,12 @@ fn explicit_audio_refresh_commits_a_new_content_object_and_pointer() {
     let item = video("refresh_id");
     let first = cache.audio(&item, CachePolicy::Populate).unwrap().value;
     let second = cache.audio(&item, CachePolicy::Refresh).unwrap().value;
-    assert_ne!(first, second);
-    assert!(first.exists());
-    assert!(second.exists());
+    assert_ne!(first.path, second.path);
+    assert!(first.path.exists());
+    assert!(second.path.exists());
     assert_eq!(
-        cache.audio(&item, CachePolicy::Offline).unwrap().value,
-        second
+        cache.audio(&item, CachePolicy::Offline).unwrap().value.path,
+        second.path
     );
 }
 
@@ -493,7 +520,13 @@ fn cached_youtube_wavs_feed_the_dsp_optimizer() {
     let cache = YoutubeCache::new(dir.path().join("youtube"), FakeBackend::default());
     let paths = [video("tone_a"), video("tone_b")]
         .iter()
-        .map(|video| cache.audio(video, CachePolicy::Populate).unwrap().value)
+        .map(|video| {
+            cache
+                .audio(video, CachePolicy::Populate)
+                .unwrap()
+                .value
+                .path
+        })
         .collect::<Vec<_>>();
     let result = loob_core::smooth_local_files(
         &paths,
@@ -506,6 +539,220 @@ fn cached_youtube_wavs_feed_the_dsp_optimizer() {
     assert_ne!(
         result.ordered_tracks[0].selection_index,
         result.ordered_tracks[1].selection_index
+    );
+}
+
+#[test]
+fn unchanged_reference_hit_performs_zero_additional_full_hashes() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("fast_hit");
+    cache.audio(&item, CachePolicy::Populate).unwrap();
+    let hashes_after_commit = cache.full_hash_count();
+    let hit = cache.audio(&item, CachePolicy::Offline).unwrap();
+    assert!(hit.was_cached);
+    assert_eq!(cache.full_hash_count(), hashes_after_commit);
+}
+
+#[test]
+fn explicit_verify_performs_one_strong_hash() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("strong_verify");
+    cache.audio(&item, CachePolicy::Populate).unwrap();
+    let before = cache.full_hash_count();
+    cache.verify_audio(&item).unwrap();
+    assert_eq!(cache.full_hash_count(), before + 1);
+}
+
+#[test]
+fn metadata_change_hashes_once_and_repairs_the_fingerprint() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("metadata_change");
+    let audio = cache.audio(&item, CachePolicy::Populate).unwrap().value;
+    let original = fs::read(&audio.path).unwrap();
+    thread::sleep(Duration::from_millis(5));
+    fs::write(&audio.path, &original).unwrap();
+    let before = cache.full_hash_count();
+    assert!(cache.audio(&item, CachePolicy::Offline).unwrap().was_cached);
+    assert_eq!(cache.full_hash_count(), before + 1);
+    assert!(cache.audio(&item, CachePolicy::Offline).unwrap().was_cached);
+    assert_eq!(cache.full_hash_count(), before + 1);
+}
+
+#[test]
+fn changed_bytes_invalidate_offline_and_populate_recovers() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = FakeBackend::default();
+    let downloads = Arc::clone(&backend.downloads);
+    let cache = YoutubeCache::new(dir.path(), backend);
+    let item = video("corrupt");
+    let audio = cache.audio(&item, CachePolicy::Populate).unwrap().value;
+    let mut corrupted = fs::read(&audio.path).unwrap();
+    corrupted[64] ^= 0xff;
+    thread::sleep(Duration::from_millis(5));
+    fs::write(&audio.path, corrupted).unwrap();
+    assert!(matches!(
+        cache.audio(&item, CachePolicy::Offline),
+        Err(YtError::OfflineMiss(_))
+    ));
+    let recovered = cache.audio(&item, CachePolicy::Populate).unwrap();
+    assert!(!recovered.was_cached);
+    assert_eq!(downloads.load(Ordering::SeqCst), 2);
+    assert!(dir.path().join("audio/quarantine").is_dir());
+}
+
+#[test]
+fn legacy_wav_reference_is_upgraded_without_a_migration_hash() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("legacy");
+    cache.audio(&item, CachePolicy::Populate).unwrap();
+    let reference = dir.path().join("audio/refs/legacy.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&reference).unwrap()).unwrap();
+    value["pipeline_version"] = "yt-dlp-wav-v1".into();
+    value.as_object_mut().unwrap().remove("format");
+    value.as_object_mut().unwrap().remove("content_type");
+    value.as_object_mut().unwrap().remove("fingerprint");
+    fs::write(&reference, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    let before = cache.full_hash_count();
+    let cached = cache.audio(&item, CachePolicy::Offline).unwrap();
+    assert!(cached.was_cached);
+    assert_eq!(cached.value.format, AudioFormat::Wav);
+    assert_eq!(cache.full_hash_count(), before);
+    let upgraded: serde_json::Value =
+        serde_json::from_slice(&fs::read(reference).unwrap()).unwrap();
+    assert_eq!(upgraded["pipeline_version"], "yt-dlp-audio-reference-v2");
+    assert_eq!(upgraded["format"], "wav");
+    assert_eq!(upgraded["content_type"], "audio/wav");
+    assert!(upgraded["fingerprint"].is_object());
+}
+
+#[test]
+fn unsafe_object_path_is_never_followed() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("confined");
+    cache.audio(&item, CachePolicy::Populate).unwrap();
+    let reference = dir.path().join("audio/refs/confined.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&reference).unwrap()).unwrap();
+    value["object_file"] = "../outside.wav".into();
+    fs::write(reference, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    assert!(matches!(
+        cache.audio(&item, CachePolicy::Offline),
+        Err(YtError::OfflineMiss(_))
+    ));
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinked_object_is_not_a_cache_hit() {
+    use std::os::unix::fs::symlink;
+
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("no_symlinks");
+    let audio = cache.audio(&item, CachePolicy::Populate).unwrap().value;
+    let outside = dir.path().join("outside.wav");
+    fs::copy(&audio.path, &outside).unwrap();
+    fs::remove_file(&audio.path).unwrap();
+    symlink(&outside, &audio.path).unwrap();
+    assert!(matches!(
+        cache.audio(&item, CachePolicy::Offline),
+        Err(YtError::OfflineMiss(_))
+    ));
+}
+
+#[test]
+fn compact_format_is_explicit_and_uses_its_real_extension() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(
+        dir.path(),
+        FakeBackend {
+            m4a: true,
+            ..Default::default()
+        },
+    );
+    let item = video("compact");
+    let first = cache.audio(&item, CachePolicy::Populate).unwrap().value;
+    assert_eq!(first.format, AudioFormat::M4a);
+    assert_eq!(first.path.extension().unwrap(), "m4a");
+    let reference: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.path().join("audio/refs/compact.json")).unwrap())
+            .unwrap();
+    assert_eq!(reference["content_type"], "audio/mp4");
+    let second = cache.audio(&item, CachePolicy::Offline).unwrap().value;
+    assert_eq!(second.path, first.path);
+    assert_eq!(second.content_sha256, first.content_sha256);
+}
+
+#[test]
+fn video_id_binding_reuses_reference_when_request_url_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = FakeBackend::default();
+    let downloads = Arc::clone(&backend.downloads);
+    let cache = YoutubeCache::new(dir.path(), backend);
+    let mut original = video("stable_id");
+    original.url = "https://music.youtube.com/watch?v=stable_id&feature=tracking".into();
+    cache.audio(&original, CachePolicy::Populate).unwrap();
+    let variant = video("stable_id");
+    assert!(
+        cache
+            .audio(&variant, CachePolicy::Offline)
+            .unwrap()
+            .was_cached
+    );
+    let reference: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.path().join("audio/refs/stable_id.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        reference["source_url"],
+        "https://www.youtube.com/watch?v=stable_id"
+    );
+    assert_eq!(downloads.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn v2_reference_requires_the_canonical_source_url() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache = YoutubeCache::new(dir.path(), FakeBackend::default());
+    let item = video("canonical_source");
+    cache.audio(&item, CachePolicy::Populate).unwrap();
+    let reference = dir.path().join("audio/refs/canonical_source.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&reference).unwrap()).unwrap();
+    value["source_url"] = "https://music.youtube.com/watch?v=canonical_source".into();
+    fs::write(reference, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    assert!(matches!(
+        cache.audio(&item, CachePolicy::Offline),
+        Err(YtError::OfflineMiss(_))
+    ));
+}
+
+#[test]
+fn playlist_preparation_uses_bounded_parallel_downloads_and_preserves_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = playlist_backend(&["one", "two", "three", "four", "five"], &[]);
+    let max_active = Arc::clone(&backend.max_active_downloads);
+    let cache = YoutubeCache::new(dir.path(), backend);
+    let prepared = cache
+        .prepare_playlist_audio(
+            "https://www.youtube.com/playlist?list=PL_parallel",
+            CachePolicy::Populate,
+            |_| {},
+        )
+        .unwrap();
+    assert!((2..=3).contains(&max_active.load(Ordering::SeqCst)));
+    assert_eq!(
+        prepared
+            .tracks
+            .iter()
+            .map(|track| track.video_id.as_str())
+            .collect::<Vec<_>>(),
+        ["one", "two", "three", "four", "five"]
     );
 }
 

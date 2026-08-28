@@ -1,7 +1,8 @@
 use bytes::Bytes;
-use http_body_util::Full;
+use futures_util::TryStreamExt;
+use http_body_util::{combinators::BoxBody, BodyExt, Empty, StreamBody};
 use hyper::{
-    body::Incoming,
+    body::{Frame, Incoming},
     header::{
         ACCEPT_RANGES, ACCESS_CONTROL_ALLOW_ORIGIN, ALLOW, CACHE_CONTROL, CONTENT_LENGTH,
         CONTENT_RANGE, CONTENT_TYPE, HOST, ORIGIN, VARY,
@@ -16,15 +17,17 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     convert::Infallible,
-    fs::File,
-    io::{Read, Seek, SeekFrom},
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-use tokio::sync::oneshot;
+use tokio::{
+    io::{AsyncReadExt, AsyncSeekExt},
+    sync::oneshot,
+};
+use tokio_util::io::ReaderStream;
 
-const MAX_RANGE_BYTES: u64 = 1024 * 1024;
+type MediaBody = BoxBody<Bytes, std::io::Error>;
 
 #[derive(Clone)]
 pub struct MediaRegistry {
@@ -91,7 +94,7 @@ impl MediaServer {
                             let service = service_fn(move |request| {
                                 let registry = registry.clone();
                                 async move {
-                                    Ok::<_, Infallible>(registry.http_response(request))
+                                    Ok::<_, Infallible>(registry.http_response(request).await)
                                 }
                             });
                             let _ = http1::Builder::new()
@@ -191,7 +194,7 @@ impl MediaRegistry {
             .flatten()
     }
 
-    fn http_response(&self, request: Request<Incoming>) -> Response<Full<Bytes>> {
+    async fn http_response(&self, request: Request<Incoming>) -> Response<MediaBody> {
         let expected_host = self.authority.address.to_string();
         if request
             .headers()
@@ -204,13 +207,14 @@ impl MediaRegistry {
         if request.method() != Method::GET && request.method() != Method::HEAD {
             return response_builder(StatusCode::METHOD_NOT_ALLOWED, &request)
                 .header(ALLOW, "GET, HEAD")
-                .body(Full::new(Bytes::new()))
+                .body(empty_body())
                 .unwrap();
         }
         let Some(path) = self.resolve_request_path(request.uri().path()) else {
             return empty_response(StatusCode::NOT_FOUND, &request);
         };
         file_response(&path, &request)
+            .await
             .unwrap_or_else(|_| empty_response(StatusCode::NOT_FOUND, &request))
     }
 }
@@ -224,12 +228,18 @@ fn media_token(secret: &[u8; 32], generation: u64, index: usize, path: &Path) ->
     format!("{:x}", hasher.finalize())
 }
 
-fn file_response(
+async fn file_response(
     path: &Path,
     request: &Request<Incoming>,
-) -> Result<Response<Full<Bytes>>, String> {
-    let mut file = File::open(path).map_err(|error| error.to_string())?;
-    let length = file.metadata().map_err(|error| error.to_string())?.len();
+) -> Result<Response<MediaBody>, String> {
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|error| error.to_string())?;
+    let length = file
+        .metadata()
+        .await
+        .map_err(|error| error.to_string())?
+        .len();
     let content_type = media_content_type(path);
     let range = request
         .headers()
@@ -242,45 +252,49 @@ fn file_response(
                 .header(CONTENT_RANGE, format!("bytes */{length}"))
                 .header(ACCEPT_RANGES, "bytes")
                 .header(CONTENT_LENGTH, 0)
-                .body(Full::new(Bytes::new()))
+                .body(empty_body())
                 .unwrap());
         };
-        let response_end = end.min(start.saturating_add(MAX_RANGE_BYTES - 1));
-        let response_length = response_end - start + 1;
-        let mut body = Vec::new();
-        if request.method() == Method::GET {
-            file.seek(SeekFrom::Start(start))
+        let response_length = end - start + 1;
+        let body = if request.method() == Method::GET {
+            file.seek(std::io::SeekFrom::Start(start))
+                .await
                 .map_err(|error| error.to_string())?;
-            file.take(response_length)
-                .read_to_end(&mut body)
-                .map_err(|error| error.to_string())?;
-            if body.len() as u64 != response_length {
-                return Err("audio file changed while it was being served".into());
-            }
-        }
+            stream_body(file.take(response_length))
+        } else {
+            empty_body()
+        };
         return Ok(response_builder(StatusCode::PARTIAL_CONTENT, request)
             .header(CONTENT_TYPE, content_type)
             .header(ACCEPT_RANGES, "bytes")
-            .header(
-                CONTENT_RANGE,
-                format!("bytes {start}-{response_end}/{length}"),
-            )
+            .header(CONTENT_RANGE, format!("bytes {start}-{end}/{length}"))
             .header(CONTENT_LENGTH, response_length)
-            .body(Full::new(Bytes::from(body)))
+            .body(body)
             .unwrap());
     }
 
-    let mut body = Vec::new();
-    if request.method() == Method::GET {
-        file.read_to_end(&mut body)
-            .map_err(|error| error.to_string())?;
-    }
+    let body = if request.method() == Method::GET {
+        stream_body(file.take(length))
+    } else {
+        empty_body()
+    };
     Ok(response_builder(StatusCode::OK, request)
         .header(CONTENT_TYPE, content_type)
         .header(ACCEPT_RANGES, "bytes")
         .header(CONTENT_LENGTH, length)
-        .body(Full::new(Bytes::from(body)))
+        .body(body)
         .unwrap())
+}
+
+fn stream_body(reader: tokio::io::Take<tokio::fs::File>) -> MediaBody {
+    let stream = ReaderStream::new(reader).map_ok(Frame::data);
+    BodyExt::boxed(StreamBody::new(stream))
+}
+
+fn empty_body() -> MediaBody {
+    Empty::<Bytes>::new()
+        .map_err(|never| match never {})
+        .boxed()
 }
 
 fn parse_range(value: &str, length: u64) -> Option<(u64, u64)> {
@@ -353,10 +367,10 @@ fn response_builder(
     builder
 }
 
-fn empty_response(status: StatusCode, request: &Request<Incoming>) -> Response<Full<Bytes>> {
+fn empty_response(status: StatusCode, request: &Request<Incoming>) -> Response<MediaBody> {
     response_builder(status, request)
         .header(CONTENT_LENGTH, 0)
-        .body(Full::new(Bytes::new()))
+        .body(empty_body())
         .unwrap()
 }
 
@@ -526,11 +540,19 @@ mod tests {
     }
 
     #[test]
-    fn large_open_range_is_bounded_without_reading_the_entire_track() {
+    fn compact_cached_formats_have_specific_media_types() {
+        assert_eq!(media_content_type(Path::new("track.m4a")), "audio/mp4");
+        assert_eq!(media_content_type(Path::new("track.aac")), "audio/aac");
+        assert_eq!(media_content_type(Path::new("legacy.wav")), "audio/wav");
+    }
+
+    #[test]
+    fn large_open_range_returns_the_complete_requested_remainder() {
         let server = MediaServer::start().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let audio = dir.path().join("large.mp3");
-        fs::write(&audio, vec![7_u8; MAX_RANGE_BYTES as usize + 4096]).unwrap();
+        let length = 1024 * 1024 + 4096;
+        fs::write(&audio, vec![7_u8; length]).unwrap();
         let url = server.registry().replace(&[audio]).unwrap()[0].clone();
         let (host, path) = url_parts(&url);
         let response = request(
@@ -541,10 +563,11 @@ mod tests {
             &[("Range", "bytes=0-")],
         );
         assert_eq!(response.status, 206);
-        assert_eq!(response.body.len(), MAX_RANGE_BYTES as usize);
+        assert_eq!(response.body.len(), length);
         assert_eq!(
             response.headers["content-range"],
-            format!("bytes 0-{}/{}", MAX_RANGE_BYTES - 1, MAX_RANGE_BYTES + 4096)
+            format!("bytes 0-{}/{}", length - 1, length)
         );
+        assert_eq!(response.headers["content-length"], length.to_string());
     }
 }

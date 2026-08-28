@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
-use loob_core::{smooth_local_files, Config, FeatureCache, Objective};
+use loob_core::{
+    smooth_audio_inputs, smooth_local_files, AudioInput, Config, FeatureCache, Objective,
+};
 use loob_yt::{CachePolicy, RealYtDlp, YoutubeCache, YtError};
 use std::path::PathBuf;
 
@@ -39,6 +41,9 @@ enum Commands {
         /// Analyze and bottleneck-optimize the bounded cached/populated subset.
         #[arg(long, requires = "audio_limit")]
         optimize: bool,
+        /// Strongly hash and scrub each requested cached audio object.
+        #[arg(long, requires = "audio_limit", conflicts_with_all = ["populate", "refresh"])]
+        verify: bool,
     },
 }
 
@@ -74,9 +79,13 @@ fn main() -> anyhow::Result<()> {
             refresh,
             audio_limit,
             optimize,
+            verify,
         } => {
             if optimize && audio_limit == 0 {
                 anyhow::bail!("--optimize requires a positive --audio-limit");
+            }
+            if verify && audio_limit == 0 {
+                anyhow::bail!("--verify requires a positive --audio-limit");
             }
             let policy = if refresh {
                 CachePolicy::Refresh
@@ -97,21 +106,36 @@ fn main() -> anyhow::Result<()> {
                     "fetched"
                 }
             );
-            let mut audio_paths = Vec::new();
-            for video in manifest.value.videos.iter().take(audio_limit) {
-                match cache.audio(video, policy) {
+            let mut audio_inputs = Vec::new();
+            for (index, video) in manifest.value.videos.iter().take(audio_limit).enumerate() {
+                let outcome = if verify {
+                    cache
+                        .verify_audio(video)
+                        .map(|value| loob_yt::CacheOutcome {
+                            value,
+                            was_cached: true,
+                        })
+                } else {
+                    cache.audio(video, policy)
+                };
+                match outcome {
                     Ok(audio) => {
                         println!(
                             "{}: {} ({})",
                             video.id,
-                            audio.value.display(),
+                            audio.value.path.display(),
                             if audio.was_cached {
                                 "cache hit"
                             } else {
                                 "downloaded"
                             }
                         );
-                        audio_paths.push(audio.value);
+                        audio_inputs.push(AudioInput {
+                            task_id: format!("{}-{index}", video.id),
+                            title: video.title.clone(),
+                            path: audio.value.path,
+                            content_sha256: Some(audio.value.content_sha256),
+                        });
                     }
                     Err(YtError::VideoUnavailable { reason, .. }) => {
                         eprintln!("skipped {}: {}", video.title, reason.user_message());
@@ -120,11 +144,11 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             if optimize {
-                if audio_paths.is_empty() {
+                if audio_inputs.is_empty() {
                     anyhow::bail!("none of the requested playlist tracks are available");
                 }
-                let result = smooth_local_files(
-                    &audio_paths,
+                let result = smooth_audio_inputs(
+                    &audio_inputs,
                     &Config::default(),
                     &FeatureCache::new(cache_dir.join("derived-dsp")),
                     |progress| eprintln!("{progress:?}"),

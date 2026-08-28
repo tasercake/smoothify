@@ -3,10 +3,11 @@ mod process;
 mod types;
 
 pub use cache::{canonical_playlist_url, CacheOutcome, CachePolicy, YoutubeCache};
-pub use process::{RealYtDlp, YtDlpBackend};
+pub use process::{DownloadedAudio, RealYtDlp, YtDlpBackend};
 pub use types::{
-    AudioProvenance, PlaylistInfo, PreparedAudioTrack, PreparedPlaylist, SkippedTrack,
-    UnavailabilityReason, UnavailableAudioProvenance, VideoInfo, YoutubeProgress,
+    AudioFormat, AudioProvenance, FileFingerprint, PlaylistInfo, PreparedAudio, PreparedAudioTrack,
+    PreparedPlaylist, SkippedTrack, UnavailabilityReason, UnavailableAudioProvenance, VideoInfo,
+    YoutubeProgress,
 };
 
 use thiserror::Error;
@@ -17,7 +18,7 @@ pub enum YtError {
     YtDlpNotFound,
     #[error("yt-dlp failed: {0}")]
     YtDlpFailed(String),
-    #[error("yt-dlp archive skipped {0}, but no cached WAV exists")]
+    #[error("yt-dlp archive skipped {0}, but no cached audio exists")]
     ArchiveSkippedMissing(String),
     #[error("video {video_id} is unavailable: {reason:?}")]
     VideoUnavailable {

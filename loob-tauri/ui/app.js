@@ -4,6 +4,9 @@ const run = document.querySelector('#run');
 const selection = document.querySelector('#selection');
 const progress = document.querySelector('#progress');
 const status = document.querySelector('#status');
+const progressSummary = document.querySelector('#progress-summary');
+const activeWork = document.querySelector('#active-work');
+const activeTasks = document.querySelector('#active-tasks');
 const results = document.querySelector('#results');
 const skippedSection = document.querySelector('#skipped-section');
 const skipped = document.querySelector('#skipped');
@@ -31,43 +34,77 @@ function setPhaseProgress(current, total) {
   progress.value = Math.min(Math.max(current, 0), progress.max);
 }
 
+function clearActiveWork(clearSummary = false) {
+  activeTasks.replaceChildren();
+  activeWork.hidden = true;
+  if (clearSummary) progressSummary.textContent = '';
+}
+
+function renderWorkSnapshot(payload) {
+  setPhaseProgress(payload.completed, payload.total);
+  const audio = payload.work_phase === 'audio';
+  status.textContent = audio
+    ? `Preparing playlist audio — ${payload.completed} of ${payload.total} complete.`
+    : `Preparing DSP features — ${payload.completed} of ${payload.total} complete.`;
+  const counters = payload.counters;
+  const parts = audio
+    ? [
+        ['Reused', counters.cached],
+        ['Downloaded', counters.downloaded],
+        ['Skipped cached', counters.skipped_cached],
+        ['Skipped', counters.skipped],
+        ['Failed', counters.failed]
+      ]
+    : [
+        ['Cached DSP', counters.cached],
+        ['Computed', counters.computed],
+        ['Failed', counters.failed]
+      ];
+  progressSummary.textContent = parts
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => `${label} ${count}`)
+    .join(' · ');
+  activeTasks.replaceChildren();
+  for (const task of payload.active) {
+    const item = document.createElement('li');
+    const title = document.createElement('span');
+    title.textContent = task.title;
+    const state = document.createElement('span');
+    state.className = 'task-state';
+    state.textContent = task.state === 'analyzing' ? 'decoding / analyzing' : 'checking / downloading';
+    item.append(title, state);
+    activeTasks.appendChild(item);
+  }
+  activeWork.hidden = payload.active.length === 0;
+}
+
 function renderProgress(payload) {
   if (payload.phase === 'validating') {
+    clearActiveWork(true);
     setPhaseProgress(0, payload.total);
     status.textContent = payload.source === 'youtube_playlist'
       ? 'Validating the YouTube playlist…'
       : `Validating ${payload.total} selected track${payload.total === 1 ? '' : 's'}…`;
   } else if (payload.phase === 'checking_manifest') {
+    clearActiveWork(true);
     setPhaseProgress(0, 1);
     status.textContent = 'Checking the playlist manifest cache…';
   } else if (payload.phase === 'manifest_ready') {
+    clearActiveWork(true);
     setPhaseProgress(1, 1);
     status.textContent = `${payload.was_cached ? 'Reused cached' : 'Fetched'} manifest for ${payload.title} — ${payload.total} source tracks.`;
-  } else if (payload.phase === 'preparing_audio') {
-    setPhaseProgress(payload.current - 1, payload.total);
-    status.textContent = `Preparing audio ${payload.current} of ${payload.total}: ${payload.title}`;
-  } else if (payload.phase === 'audio_ready') {
-    setPhaseProgress(payload.current, payload.total);
-    const action = {
-      cached: 'Reused cached audio for',
-      downloaded: 'Downloaded',
-      skipped_cached: 'Reused cached unavailable status; skipped',
-      skipped: 'Unavailable; skipped'
-    }[payload.outcome];
-    status.textContent = `${action} ${payload.title} (${payload.current} of ${payload.total}).`;
-  } else if (payload.phase === 'checking_dsp') {
-    setPhaseProgress(payload.current - 1, payload.total);
-    status.textContent = `Checking DSP features ${payload.current} of ${payload.total}: ${payload.title}`;
-  } else if (payload.phase === 'dsp_ready') {
-    setPhaseProgress(payload.current, payload.total);
-    status.textContent = `${payload.outcome === 'cached' ? 'Reused cached DSP features for' : 'Computed DSP features for'} ${payload.title} (${payload.current} of ${payload.total}).`;
+  } else if (payload.phase === 'work_snapshot') {
+    renderWorkSnapshot(payload);
   } else if (payload.phase === 'optimizing') {
+    clearActiveWork();
     setPhaseProgress(0, 1);
     status.textContent = `Optimizing ${payload.total} usable tracks…`;
   } else if (payload.phase === 'preparing_player') {
+    clearActiveWork();
     setPhaseProgress(0, 1);
     status.textContent = `Preparing ${payload.total} optimized tracks for local playback…`;
   } else if (payload.phase === 'completed') {
+    clearActiveWork();
     setPhaseProgress(1, 1);
     status.textContent = `Completed ${payload.total} tracks.`;
   }
@@ -81,8 +118,11 @@ function beginOperation(initialStatus) {
     throw new Error('Progress updates are unavailable in this application build.');
   }
   const channel = new Channel();
+  let lastSequence = 0;
   channel.onmessage = (payload) => {
-    if (id === activeOperation) renderProgress(payload);
+    if (id !== activeOperation || payload.seq <= lastSequence) return;
+    lastSequence = payload.seq;
+    renderProgress(payload);
   };
   return { id, channel };
 }

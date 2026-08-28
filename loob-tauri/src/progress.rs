@@ -1,8 +1,15 @@
 use loob_core::Progress;
-use loob_yt::{UnavailabilityReason, YoutubeProgress};
+use loob_yt::YoutubeProgress;
 use serde::Serialize;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use tauri::ipc::Channel;
+
+const MAX_ACTIVE_TASKS: usize = 8;
+const FAST_UPDATE_INTERVAL: Duration = Duration::from_millis(75);
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -13,23 +20,39 @@ pub enum ProgressSource {
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum AudioOutcome {
-    Cached,
-    Downloaded,
-    SkippedCached,
-    Skipped,
+pub enum WorkPhase {
+    Audio,
+    Dsp,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum DspOutcome {
-    Cached,
-    Computed,
+pub enum TaskState {
+    Checking,
+    Analyzing,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ActiveTask {
+    task_id: String,
+    source_index: usize,
+    title: String,
+    state: TaskState,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
+pub struct OutcomeCounters {
+    cached: usize,
+    downloaded: usize,
+    skipped_cached: usize,
+    skipped: usize,
+    computed: usize,
+    failed: usize,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "phase", rename_all = "snake_case")]
-pub enum AppProgress {
+pub enum ProgressEvent {
     Validating {
         source: ProgressSource,
         total: usize,
@@ -40,27 +63,12 @@ pub enum AppProgress {
         total: usize,
         was_cached: bool,
     },
-    PreparingAudio {
-        current: usize,
+    WorkSnapshot {
+        work_phase: WorkPhase,
+        completed: usize,
         total: usize,
-        title: String,
-    },
-    AudioReady {
-        current: usize,
-        total: usize,
-        title: String,
-        outcome: AudioOutcome,
-    },
-    CheckingDsp {
-        current: usize,
-        total: usize,
-        title: String,
-    },
-    DspReady {
-        current: usize,
-        total: usize,
-        title: String,
-        outcome: DspOutcome,
+        counters: OutcomeCounters,
+        active: Vec<ActiveTask>,
     },
     Optimizing {
         total: usize,
@@ -73,146 +81,283 @@ pub enum AppProgress {
     },
 }
 
-impl AppProgress {
-    fn from_youtube(progress: YoutubeProgress) -> Self {
-        match progress {
-            YoutubeProgress::FetchingManifest => Self::CheckingManifest,
-            YoutubeProgress::ManifestReady {
-                title,
-                total,
-                was_cached,
-            } => Self::ManifestReady {
-                title,
-                total,
-                was_cached,
-            },
-            YoutubeProgress::ResolvingAudio {
-                current,
-                total,
-                title,
-            } => Self::PreparingAudio {
-                current,
-                total,
-                title,
-            },
-            YoutubeProgress::AudioReady {
-                current,
-                total,
-                title,
-                was_cached,
-            } => Self::AudioReady {
-                current,
-                total,
-                title,
-                outcome: if was_cached {
-                    AudioOutcome::Cached
-                } else {
-                    AudioOutcome::Downloaded
-                },
-            },
-            YoutubeProgress::AudioSkipped {
-                current,
-                total,
-                title,
-                reason,
-                was_cached,
-            } => Self::AudioReady {
-                current,
-                total,
-                title: skipped_title(title, reason),
-                outcome: if was_cached {
-                    AudioOutcome::SkippedCached
-                } else {
-                    AudioOutcome::Skipped
-                },
-            },
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct AppProgress {
+    pub seq: u64,
+    #[serde(flatten)]
+    pub event: ProgressEvent,
+}
+
+#[derive(Debug)]
+struct WorkState {
+    phase: WorkPhase,
+    completed: usize,
+    total: usize,
+    counters: OutcomeCounters,
+    active: BTreeMap<String, ActiveTask>,
+}
+
+impl WorkState {
+    fn new(phase: WorkPhase, total: usize) -> Self {
+        Self {
+            phase,
+            completed: 0,
+            total,
+            counters: OutcomeCounters::default(),
+            active: BTreeMap::new(),
         }
     }
 
-    fn from_core(progress: Progress) -> Self {
-        match progress {
-            Progress::Analyzing {
-                current,
-                total,
-                title,
-            } => Self::CheckingDsp {
-                current,
-                total,
-                title,
-            },
-            Progress::CacheHit {
-                current,
-                total,
-                title,
-            } => Self::DspReady {
-                current,
-                total,
-                title,
-                outcome: DspOutcome::Cached,
-            },
-            Progress::Analyzed {
-                current,
-                total,
-                title,
-            } => Self::DspReady {
-                current,
-                total,
-                title,
-                outcome: DspOutcome::Computed,
-            },
-            Progress::Optimizing { total } => Self::Optimizing { total },
+    fn snapshot(&self) -> ProgressEvent {
+        ProgressEvent::WorkSnapshot {
+            work_phase: self.phase,
+            completed: self.completed,
+            total: self.total,
+            counters: self.counters.clone(),
+            active: self
+                .active
+                .values()
+                .take(MAX_ACTIVE_TASKS)
+                .cloned()
+                .collect(),
         }
     }
 }
 
-fn skipped_title(title: String, reason: UnavailabilityReason) -> String {
-    format!("{} ({})", title, reason.user_message().to_ascii_lowercase())
+struct ReporterState {
+    channel: Channel<AppProgress>,
+    delivery_error: bool,
+    seq: u64,
+    work: Option<WorkState>,
+    last_work_send: Option<Instant>,
+    work_dirty: bool,
 }
 
 #[derive(Clone)]
 pub struct ProgressReporter {
-    channel: Channel<AppProgress>,
-    delivery_error: Arc<Mutex<bool>>,
+    inner: Arc<Mutex<ReporterState>>,
 }
 
 impl ProgressReporter {
     pub fn new(channel: Channel<AppProgress>) -> Self {
-        Self {
+        let inner = Arc::new(Mutex::new(ReporterState {
             channel,
-            delivery_error: Arc::new(Mutex::new(false)),
-        }
+            delivery_error: false,
+            seq: 0,
+            work: None,
+            last_work_send: None,
+            work_dirty: false,
+        }));
+        let weak = Arc::downgrade(&inner);
+        std::thread::spawn(move || loop {
+            std::thread::sleep(FAST_UPDATE_INTERVAL);
+            let Some(inner) = weak.upgrade() else {
+                break;
+            };
+            let mut state = inner.lock().unwrap_or_else(|error| error.into_inner());
+            if state.work_dirty {
+                maybe_send_work(&mut state, false);
+            }
+        });
+        Self { inner }
     }
 
-    pub fn send(&self, progress: AppProgress) -> Result<(), String> {
-        if self.channel.send(progress).is_err() {
-            *self
-                .delivery_error
-                .lock()
-                .unwrap_or_else(|error| error.into_inner()) = true;
-            Err("Progress updates could not be delivered to the window.".into())
-        } else {
-            Ok(())
-        }
+    pub fn send(&self, event: ProgressEvent) -> Result<(), String> {
+        let mut state = self.inner.lock().unwrap_or_else(|error| error.into_inner());
+        state.work = None;
+        state.work_dirty = false;
+        send_locked(&mut state, event)
     }
 
     pub fn youtube(&self, progress: YoutubeProgress) {
-        let _ = self.send(AppProgress::from_youtube(progress));
+        let mut state = self.inner.lock().unwrap_or_else(|error| error.into_inner());
+        match progress {
+            YoutubeProgress::FetchingManifest => {
+                state.work = None;
+                state.work_dirty = false;
+                let _ = send_locked(&mut state, ProgressEvent::CheckingManifest);
+            }
+            YoutubeProgress::ManifestReady {
+                title,
+                total,
+                was_cached,
+            } => {
+                state.work = None;
+                state.work_dirty = false;
+                let _ = send_locked(
+                    &mut state,
+                    ProgressEvent::ManifestReady {
+                        title,
+                        total,
+                        was_cached,
+                    },
+                );
+            }
+            YoutubeProgress::ResolvingAudio {
+                task_id,
+                source_index,
+                total,
+                title,
+            } => {
+                ensure_work(&mut state, WorkPhase::Audio, total);
+                state.work.as_mut().unwrap().active.insert(
+                    task_id.clone(),
+                    ActiveTask {
+                        task_id,
+                        source_index,
+                        title,
+                        state: TaskState::Checking,
+                    },
+                );
+                maybe_send_work(&mut state, false);
+            }
+            YoutubeProgress::AudioReady {
+                task_id,
+                total,
+                was_cached,
+                ..
+            } => {
+                ensure_work(&mut state, WorkPhase::Audio, total);
+                let work = state.work.as_mut().unwrap();
+                work.active.remove(&task_id);
+                work.completed += 1;
+                if was_cached {
+                    work.counters.cached += 1;
+                } else {
+                    work.counters.downloaded += 1;
+                }
+                maybe_send_work(&mut state, false);
+            }
+            YoutubeProgress::AudioSkipped {
+                task_id,
+                total,
+                was_cached,
+                ..
+            } => {
+                ensure_work(&mut state, WorkPhase::Audio, total);
+                let work = state.work.as_mut().unwrap();
+                work.active.remove(&task_id);
+                work.completed += 1;
+                if was_cached {
+                    work.counters.skipped_cached += 1;
+                } else {
+                    work.counters.skipped += 1;
+                }
+                maybe_send_work(&mut state, false);
+            }
+        }
     }
 
     pub fn core(&self, progress: Progress) {
-        let _ = self.send(AppProgress::from_core(progress));
+        let mut state = self.inner.lock().unwrap_or_else(|error| error.into_inner());
+        match progress {
+            Progress::Analyzing {
+                task_id,
+                source_index,
+                total,
+                title,
+            } => {
+                ensure_work(&mut state, WorkPhase::Dsp, total);
+                state.work.as_mut().unwrap().active.insert(
+                    task_id.clone(),
+                    ActiveTask {
+                        task_id,
+                        source_index,
+                        title,
+                        state: TaskState::Analyzing,
+                    },
+                );
+                maybe_send_work(&mut state, false);
+            }
+            Progress::CacheHit { task_id, total, .. } => {
+                finish_dsp(&mut state, task_id, total, true);
+            }
+            Progress::Analyzed { task_id, total, .. } => {
+                finish_dsp(&mut state, task_id, total, false);
+            }
+            Progress::Optimizing { total } => {
+                maybe_send_work(&mut state, true);
+                state.work = None;
+                state.work_dirty = false;
+                let _ = send_locked(&mut state, ProgressEvent::Optimizing { total });
+            }
+        }
     }
 
     pub fn ensure_delivery(&self) -> Result<(), String> {
-        if *self
-            .delivery_error
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-        {
+        let mut state = self.inner.lock().unwrap_or_else(|error| error.into_inner());
+        maybe_send_work(&mut state, true);
+        if state.delivery_error {
             Err("Progress updates could not be delivered to the window.".into())
         } else {
             Ok(())
         }
+    }
+
+    pub fn fail_active(&self) {
+        let mut state = self.inner.lock().unwrap_or_else(|error| error.into_inner());
+        if let Some(work) = state.work.as_mut() {
+            let failed = work.active.len();
+            work.active.clear();
+            work.counters.failed += failed;
+            work.completed = work.completed.saturating_add(failed).min(work.total);
+            maybe_send_work(&mut state, true);
+        }
+    }
+}
+
+fn ensure_work(state: &mut ReporterState, phase: WorkPhase, total: usize) {
+    if !matches!(&state.work, Some(work) if work.phase == phase && work.total == total) {
+        state.work = Some(WorkState::new(phase, total));
+        state.last_work_send = None;
+    }
+}
+
+fn finish_dsp(state: &mut ReporterState, task_id: String, total: usize, cached: bool) {
+    ensure_work(state, WorkPhase::Dsp, total);
+    let work = state.work.as_mut().unwrap();
+    work.active.remove(&task_id);
+    work.completed += 1;
+    if cached {
+        work.counters.cached += 1;
+    } else {
+        work.counters.computed += 1;
+    }
+    maybe_send_work(state, false);
+}
+
+fn maybe_send_work(state: &mut ReporterState, force: bool) {
+    let Some(work) = &state.work else {
+        return;
+    };
+    let now = Instant::now();
+    state.work_dirty = true;
+    let phase_complete = work.completed == work.total;
+    let due = state
+        .last_work_send
+        .is_none_or(|last| now.duration_since(last) >= FAST_UPDATE_INTERVAL);
+    if force || phase_complete || due {
+        let event = work.snapshot();
+        let _ = send_locked(state, event);
+        state.last_work_send = Some(now);
+        state.work_dirty = false;
+    }
+}
+
+fn send_locked(state: &mut ReporterState, event: ProgressEvent) -> Result<(), String> {
+    state.seq = state.seq.saturating_add(1);
+    if state
+        .channel
+        .send(AppProgress {
+            seq: state.seq,
+            event,
+        })
+        .is_err()
+    {
+        state.delivery_error = true;
+        Err("Progress updates could not be delivered to the window.".into())
+    } else {
+        Ok(())
     }
 }
 
@@ -220,103 +365,47 @@ impl ProgressReporter {
 mod tests {
     use super::*;
 
-    #[test]
-    fn youtube_adapter_distinguishes_cache_download_and_cached_skip() {
-        assert!(matches!(
-            AppProgress::from_youtube(YoutubeProgress::AudioReady {
-                current: 1,
-                total: 2,
-                title: "Cached".into(),
-                was_cached: true,
-            }),
-            AppProgress::AudioReady {
-                outcome: AudioOutcome::Cached,
-                ..
-            }
-        ));
-        assert!(matches!(
-            AppProgress::from_youtube(YoutubeProgress::AudioReady {
-                current: 2,
-                total: 2,
-                title: "New".into(),
-                was_cached: false,
-            }),
-            AppProgress::AudioReady {
-                outcome: AudioOutcome::Downloaded,
-                ..
-            }
-        ));
-        assert!(matches!(
-            AppProgress::from_youtube(YoutubeProgress::AudioSkipped {
-                current: 2,
-                total: 2,
-                title: "Gone".into(),
-                reason: UnavailabilityReason::Removed,
-                was_cached: true,
-            }),
-            AppProgress::AudioReady {
-                outcome: AudioOutcome::SkippedCached,
-                ..
-            }
-        ));
+    fn task(id: usize) -> ActiveTask {
+        ActiveTask {
+            task_id: format!("track-{id}"),
+            source_index: id,
+            title: format!("Track {id}"),
+            state: TaskState::Analyzing,
+        }
     }
 
     #[test]
-    fn core_adapter_distinguishes_computed_and_cached_dsp() {
-        let cached = AppProgress::from_core(Progress::CacheHit {
-            current: 1,
-            total: 2,
-            title: "One".into(),
-        });
-        let computed = AppProgress::from_core(Progress::Analyzed {
-            current: 2,
-            total: 2,
-            title: "Two".into(),
-        });
-        assert!(matches!(
-            cached,
-            AppProgress::DspReady {
-                outcome: DspOutcome::Cached,
-                ..
-            }
-        ));
-        assert!(matches!(
-            computed,
-            AppProgress::DspReady {
-                outcome: DspOutcome::Computed,
-                ..
-            }
-        ));
+    fn snapshot_caps_the_active_list() {
+        let mut work = WorkState::new(WorkPhase::Dsp, 20);
+        for index in 0..20 {
+            work.active.insert(format!("track-{index:02}"), task(index));
+        }
+        let ProgressEvent::WorkSnapshot { active, .. } = work.snapshot() else {
+            unreachable!()
+        };
+        assert_eq!(active.len(), MAX_ACTIVE_TASKS);
     }
 
     #[test]
-    fn source_and_dsp_totals_are_independent_phases() {
-        let source = AppProgress::from_youtube(YoutubeProgress::AudioReady {
-            current: 3,
-            total: 5,
-            title: "Source".into(),
-            was_cached: true,
-        });
-        let dsp = AppProgress::from_core(Progress::Analyzing {
-            current: 1,
-            total: 4,
-            title: "Usable".into(),
-        });
-        assert!(matches!(
-            source,
-            AppProgress::AudioReady {
-                current: 3,
-                total: 5,
-                ..
-            }
-        ));
-        assert!(matches!(
-            dsp,
-            AppProgress::CheckingDsp {
-                current: 1,
-                total: 4,
-                ..
-            }
-        ));
+    fn out_of_order_finishes_only_advance_aggregate_completion() {
+        let mut work = WorkState::new(WorkPhase::Dsp, 2);
+        work.active.insert("track-0".into(), task(0));
+        work.active.insert("track-1".into(), task(1));
+        work.active.remove("track-1");
+        work.completed += 1;
+        let ProgressEvent::WorkSnapshot { completed, .. } = work.snapshot() else {
+            unreachable!()
+        };
+        assert_eq!(completed, 1);
+        work.active.remove("track-0");
+        work.completed += 1;
+        let ProgressEvent::WorkSnapshot {
+            completed, active, ..
+        } = work.snapshot()
+        else {
+            unreachable!()
+        };
+        assert_eq!(completed, 2);
+        assert!(active.is_empty());
     }
 }

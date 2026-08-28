@@ -30,6 +30,11 @@
     </form>
     <progress id="progress" value="0" max="1"></progress>
     <p id="status" aria-live="polite">Ready.</p>
+    <p id="progress-summary" class="progress-summary" aria-live="polite"></p>
+    <section id="active-work" class="active-work" hidden aria-label="Currently active tasks">
+      <h2>Currently active</h2>
+      <ul id="active-tasks"></ul>
+    </section>
     <section class="player" aria-label="Playlist player">
       <audio id="audio" preload="metadata"></audio>
       <p class="player-label">Now playing</p>

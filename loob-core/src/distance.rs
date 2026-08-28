@@ -33,14 +33,24 @@ fn summary_distance(a: &DspSummary, b: &DspSummary) -> f64 {
         + 0.15 * chroma
 }
 
-/// Directional cost from the outro of A to the intro of B, plus a lower-weight
-/// whole-track similarity term.
+/// Directional cost from the final chunk of A to the first chunk of B, plus a
+/// lower-weight whole-track similarity term.
 pub fn directed_transition_cost(
     a: &TrackAnalysis,
     b: &TrackAnalysis,
     whole_track_weight: f64,
 ) -> f64 {
-    let endpoint = summary_distance(&a.outro, &b.intro);
+    let a_outro = &a
+        .chunks
+        .last()
+        .expect("TrackAnalysis invariant violated: source track has no DSP chunks")
+        .summary;
+    let b_intro = &b
+        .chunks
+        .first()
+        .expect("TrackAnalysis invariant violated: destination track has no DSP chunks")
+        .summary;
+    let endpoint = summary_distance(a_outro, b_intro);
     let whole = summary_distance(&a.whole, &b.whole);
     (1.0 - whole_track_weight) * endpoint + whole_track_weight * whole
 }

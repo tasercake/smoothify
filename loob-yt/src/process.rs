@@ -1,4 +1,4 @@
-use crate::{PlaylistInfo, UnavailabilityReason, VideoInfo, YtError};
+use crate::{AudioFormat, PlaylistInfo, UnavailabilityReason, VideoInfo, YtError};
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -8,12 +8,18 @@ use std::{
 
 pub trait YtDlpBackend: Send + Sync {
     fn fetch_playlist(&self, url: &str) -> Result<PlaylistInfo, YtError>;
-    fn download_wav(
+    fn download_audio(
         &self,
         video: &VideoInfo,
         staging_dir: &Path,
         archive: Option<&Path>,
-    ) -> Result<PathBuf, YtError>;
+    ) -> Result<DownloadedAudio, YtError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct DownloadedAudio {
+    pub path: PathBuf,
+    pub format: AudioFormat,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -69,12 +75,12 @@ impl YtDlpBackend for RealYtDlp {
         })
     }
 
-    fn download_wav(
+    fn download_audio(
         &self,
         video: &VideoInfo,
         staging_dir: &Path,
         archive: Option<&Path>,
-    ) -> Result<PathBuf, YtError> {
+    ) -> Result<DownloadedAudio, YtError> {
         std::fs::create_dir_all(staging_dir)?;
         let template = staging_dir.join(format!("{}.%(ext)s", video.id));
         let mut command = Command::new("yt-dlp");
@@ -82,9 +88,11 @@ impl YtDlpBackend for RealYtDlp {
             .args([
                 "-x",
                 "--audio-format",
-                "wav",
+                "m4a",
                 "--audio-quality",
                 "0",
+                "-f",
+                "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[acodec^=mp4a]/bestaudio",
                 "--continue",
                 "--no-overwrites",
                 "--no-warnings",
@@ -106,7 +114,7 @@ impl YtDlpBackend for RealYtDlp {
             }
             return Err(YtError::YtDlpFailed(stderr));
         }
-        let expected = staging_dir.join(format!("{}.wav", video.id));
+        let expected = staging_dir.join(format!("{}.m4a", video.id));
         if !expected.is_file() {
             let stdout = String::from_utf8_lossy(&output.stdout).to_ascii_lowercase();
             if archive.is_some()
@@ -116,12 +124,15 @@ impl YtDlpBackend for RealYtDlp {
                 return Err(YtError::ArchiveSkippedMissing(video.id.clone()));
             }
             return Err(YtError::YtDlpFailed(format!(
-                "yt-dlp exited successfully but produced no WAV for {}: {}",
+                "yt-dlp exited successfully but produced no supported M4A for {}: {}",
                 video.id,
                 String::from_utf8_lossy(&output.stdout).trim()
             )));
         }
-        Ok(expected)
+        Ok(DownloadedAudio {
+            path: expected,
+            format: AudioFormat::M4a,
+        })
     }
 }
 

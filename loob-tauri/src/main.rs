@@ -1,10 +1,13 @@
 mod media;
 mod progress;
 
-use loob_core::{smooth_local_files, Config, FeatureCache, Objective, Progress, SmoothResult};
+use loob_core::{
+    smooth_audio_inputs, smooth_local_files, AudioInput, Config, FeatureCache, Objective, Progress,
+    SmoothResult,
+};
 use loob_yt::{CachePolicy, RealYtDlp, SkippedTrack, YoutubeCache, YoutubeProgress, YtError};
 use media::{MediaRegistry, MediaServer};
-use progress::{AppProgress, ProgressReporter, ProgressSource};
+use progress::{AppProgress, ProgressEvent, ProgressReporter, ProgressSource};
 use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
@@ -78,7 +81,7 @@ async fn order_audio_files(
         .unwrap_or_else(|error| error.into_inner())
         .clone();
     let reporter = ProgressReporter::new(on_progress);
-    reporter.send(AppProgress::Validating {
+    reporter.send(ProgressEvent::Validating {
         source: ProgressSource::LocalFiles,
         total: file_paths.len(),
     })?;
@@ -93,14 +96,17 @@ async fn order_audio_files(
         let core_reporter = reporter.clone();
         let result = smooth_local_files(&file_paths, &config, &cache, |progress: Progress| {
             core_reporter.core(progress);
-        })
-        .map_err(|e| e.to_string())?;
+        });
+        if result.is_err() {
+            reporter.fail_active();
+        }
+        let result = result.map_err(|e| e.to_string())?;
         reporter.ensure_delivery()?;
-        reporter.send(AppProgress::PreparingPlayer {
+        reporter.send(ProgressEvent::PreparingPlayer {
             total: result.ordered_tracks.len(),
         })?;
         let result = register_result(&state.media, result)?;
-        reporter.send(AppProgress::Completed {
+        reporter.send(ProgressEvent::Completed {
             total: result.ordered_tracks.len(),
         })?;
         Ok(result)
@@ -135,7 +141,7 @@ async fn order_youtube_playlist(
     let state = state.inner().clone();
     state.media.invalidate();
     let reporter = ProgressReporter::new(on_progress);
-    reporter.send(AppProgress::Validating {
+    reporter.send(ProgressEvent::Validating {
         source: ProgressSource::YoutubePlaylist,
         total: 0,
     })?;
@@ -143,11 +149,17 @@ async fn order_youtube_playlist(
     tauri::async_runtime::spawn_blocking(move || {
         let youtube = YoutubeCache::new(app_cache.join("youtube-cache"), RealYtDlp);
         let youtube_reporter = reporter.clone();
-        let prepared = youtube
-            .prepare_playlist_audio(&url, CachePolicy::Populate, |progress: YoutubeProgress| {
+        let prepared = youtube.prepare_playlist_audio(
+            &url,
+            CachePolicy::Populate,
+            |progress: YoutubeProgress| {
                 youtube_reporter.youtube(progress);
-            })
-            .map_err(user_youtube_error)?;
+            },
+        );
+        if prepared.is_err() {
+            reporter.fail_active();
+        }
+        let prepared = prepared.map_err(user_youtube_error)?;
         reporter.ensure_delivery()?;
         if prepared.tracks.is_empty() {
             return Err(if prepared.skipped.is_empty() {
@@ -159,31 +171,35 @@ async fn order_youtube_playlist(
                 )
             });
         }
-        let paths = prepared
+        let inputs = prepared
             .tracks
             .iter()
-            .map(|track| track.path.clone())
+            .enumerate()
+            .map(|(index, track)| AudioInput {
+                task_id: format!("{}-{index}", track.video_id),
+                title: track.title.clone(),
+                path: track.path.clone(),
+                content_sha256: Some(track.content_sha256.clone()),
+            })
             .collect::<Vec<_>>();
-        let mut result = smooth_local_files(
-            &paths,
+        let result = smooth_audio_inputs(
+            &inputs,
             &Config::default(),
             &FeatureCache::new(app_cache.join("dsp-cache")),
             |progress: Progress| {
                 reporter.core(progress);
             },
-        )
-        .map_err(|error| format!("Could not analyze this playlist: {error}"))?;
-        for track in &mut result.ordered_tracks {
-            if let Some(prepared_track) = prepared.tracks.get(track.selection_index) {
-                track.title.clone_from(&prepared_track.title);
-            }
+        );
+        if result.is_err() {
+            reporter.fail_active();
         }
+        let result = result.map_err(|error| format!("Could not analyze this playlist: {error}"))?;
         reporter.ensure_delivery()?;
-        reporter.send(AppProgress::PreparingPlayer {
+        reporter.send(ProgressEvent::PreparingPlayer {
             total: result.ordered_tracks.len(),
         })?;
         let result = register_result(&state.media, result)?;
-        reporter.send(AppProgress::Completed {
+        reporter.send(ProgressEvent::Completed {
             total: result.ordered_tracks.len(),
         })?;
         Ok(YoutubeOrderResponse {

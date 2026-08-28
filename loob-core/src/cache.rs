@@ -1,4 +1,4 @@
-use crate::{analyze_audio, TrackAnalysis, ANALYSIS_PIPELINE_VERSION};
+use crate::{analyze_audio_with_hash, TrackAnalysis, ANALYSIS_PIPELINE_VERSION};
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use fs2::FileExt;
 use std::{
@@ -27,16 +27,40 @@ impl FeatureCache {
         &self.root
     }
 
-    pub fn load_or_analyze(
+    pub fn load_or_analyze(&self, path: &Path) -> Result<(TrackAnalysis, CacheStatus), String> {
+        let hash = crate::hash_file(path)?;
+        let fingerprint = crate::analysis_fingerprint();
+        self.get_or_compute(&hash, &fingerprint, || analyze_audio_with_hash(path, &hash))
+    }
+
+    pub fn load_or_analyze_known_hash(
         &self,
         path: &Path,
-        intro_seconds: f64,
-        outro_seconds: f64,
+        content_hash: &str,
     ) -> Result<(TrackAnalysis, CacheStatus), String> {
-        let hash = crate::hash_file(path)?;
-        let fingerprint = crate::analysis_fingerprint(intro_seconds, outro_seconds);
-        self.get_or_compute(&hash, &fingerprint, || {
-            analyze_audio(path, intro_seconds, outro_seconds)
+        if content_hash.len() != 64
+            || !content_hash
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err("trusted content hash is not a lowercase SHA-256 value".into());
+        }
+        let fingerprint = crate::analysis_fingerprint();
+        self.get_or_compute(content_hash, &fingerprint, || {
+            match analyze_audio_with_hash(path, content_hash) {
+                Ok(analysis) => Ok(analysis),
+                Err(decode_error) => {
+                    // A decode failure is unusual enough to justify strong
+                    // validation. Cache I/O errors outside this closure do not
+                    // trigger an expensive audio pass.
+                    let actual = crate::hash_file(path)?;
+                    if actual != content_hash {
+                        Err("trusted audio object changed and failed integrity validation".into())
+                    } else {
+                        Err(decode_error)
+                    }
+                }
+            }
         })
     }
 
@@ -72,9 +96,11 @@ impl FeatureCache {
                 if value.content_sha256 != content_hash
                     || value.pipeline_version != ANALYSIS_PIPELINE_VERSION
                     || value.analysis_fingerprint != analysis_fingerprint
+                    || !value.has_valid_chunk_timeline()
                 {
                     return Err(
-                        "analysis result does not match cache key or pipeline version".into(),
+                        "analysis result does not match the cache key, pipeline version, or chunk timeline"
+                            .into(),
                     );
                 }
                 atomic_write_json(&feature_path, &value)?;
@@ -95,8 +121,9 @@ fn read_valid(
     let value: TrackAnalysis = serde_json::from_slice(&bytes).ok()?;
     (value.content_sha256 == expected_hash
         && value.pipeline_version == ANALYSIS_PIPELINE_VERSION
-        && value.analysis_fingerprint == expected_fingerprint)
-        .then_some(value)
+        && value.analysis_fingerprint == expected_fingerprint
+        && value.has_valid_chunk_timeline())
+    .then_some(value)
 }
 
 pub(crate) fn atomic_write_json<T: serde::Serialize>(path: &Path, value: &T) -> Result<(), String> {

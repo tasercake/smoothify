@@ -5,23 +5,43 @@ use loob_optim::{
     bottleneck_cost, mean_cost, AnnealingObjective, GreedyNn, Optimizer, SimulatedAnnealing,
 };
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Mutex,
+    },
+    thread,
+};
+
+#[derive(Debug, Clone)]
+pub struct AudioInput {
+    pub task_id: String,
+    pub title: String,
+    pub path: PathBuf,
+    /// Trusted hash supplied by a validated content-addressed source cache.
+    /// Arbitrary local files leave this empty and are hashed normally.
+    pub content_sha256: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "stage", rename_all = "snake_case")]
 pub enum Progress {
     Analyzing {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
     },
     CacheHit {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
     },
     Analyzed {
-        current: usize,
+        task_id: String,
+        source_index: usize,
         total: usize,
         title: String,
     },
@@ -34,49 +54,109 @@ pub fn smooth_local_files(
     paths: &[PathBuf],
     config: &Config,
     cache: &FeatureCache,
-    mut progress: impl FnMut(Progress),
+    progress: impl Fn(Progress) + Sync,
 ) -> Result<SmoothResult, LoobError> {
-    if paths.is_empty() {
+    let inputs = paths
+        .iter()
+        .enumerate()
+        .map(|(index, path)| AudioInput {
+            task_id: format!("local-{index}"),
+            title: display_title(path),
+            path: path.clone(),
+            content_sha256: None,
+        })
+        .collect::<Vec<_>>();
+    smooth_audio_inputs(&inputs, config, cache, progress)
+}
+
+pub fn smooth_audio_inputs(
+    inputs: &[AudioInput],
+    config: &Config,
+    cache: &FeatureCache,
+    progress: impl Fn(Progress) + Sync,
+) -> Result<SmoothResult, LoobError> {
+    if inputs.is_empty() {
         return Err(LoobError::EmptySelection);
     }
     config.validate().map_err(LoobError::InvalidConfig)?;
-    let mut tracks = Vec::with_capacity(paths.len());
-    for (index, path) in paths.iter().enumerate() {
-        let title = display_title(path);
-        progress(Progress::Analyzing {
-            current: index + 1,
-            total: paths.len(),
-            title: title.clone(),
-        });
-        let (analysis, status) = cache
-            .load_or_analyze(path, config.intro_seconds, config.outro_seconds)
-            .map_err(|message| LoobError::Analysis {
-                path: path.display().to_string(),
-                message,
-            })?;
-        if status == CacheStatus::Hit {
-            progress(Progress::CacheHit {
-                current: index + 1,
-                total: paths.len(),
-                title: title.clone(),
-            });
-        } else {
-            progress(Progress::Analyzed {
-                current: index + 1,
-                total: paths.len(),
-                title: title.clone(),
+    let total = inputs.len();
+    let results = Mutex::new(
+        (0..total)
+            .map(|_| None)
+            .collect::<Vec<Option<Result<(crate::TrackAnalysis, CacheStatus), LoobError>>>>(),
+    );
+    let next = AtomicUsize::new(0);
+    let cancelled = AtomicBool::new(false);
+    let available = thread::available_parallelism().map_or(1, usize::from);
+    let workers = total.min(available).min(4);
+    thread::scope(|scope| {
+        for _ in 0..workers {
+            scope.spawn(|| loop {
+                if cancelled.load(Ordering::Acquire) {
+                    break;
+                }
+                let index = next.fetch_add(1, Ordering::Relaxed);
+                if cancelled.load(Ordering::Acquire) {
+                    break;
+                }
+                let Some(input) = inputs.get(index) else {
+                    break;
+                };
+                progress(Progress::Analyzing {
+                    task_id: input.task_id.clone(),
+                    source_index: index,
+                    total,
+                    title: input.title.clone(),
+                });
+                let analyzed = match &input.content_sha256 {
+                    Some(hash) => cache.load_or_analyze_known_hash(&input.path, hash),
+                    None => cache.load_or_analyze(&input.path),
+                }
+                .map_err(|message| LoobError::Analysis {
+                    path: input.path.display().to_string(),
+                    message,
+                });
+                if let Ok((_, status)) = &analyzed {
+                    let event = match status {
+                        CacheStatus::Hit => Progress::CacheHit {
+                            task_id: input.task_id.clone(),
+                            source_index: index,
+                            total,
+                            title: input.title.clone(),
+                        },
+                        CacheStatus::Miss => Progress::Analyzed {
+                            task_id: input.task_id.clone(),
+                            source_index: index,
+                            total,
+                            title: input.title.clone(),
+                        },
+                    };
+                    progress(event);
+                } else {
+                    cancelled.store(true, Ordering::Release);
+                }
+                results.lock().unwrap_or_else(|error| error.into_inner())[index] = Some(analyzed);
             });
         }
-        tracks.push(Track {
-            selection_index: index,
-            title,
-            path: path.clone(),
-            analysis,
-        });
-    }
-    progress(Progress::Optimizing {
-        total: tracks.len(),
     });
+    let analyses = results
+        .into_inner()
+        .unwrap_or_else(|error| error.into_inner())
+        .into_iter()
+        .flatten()
+        .collect::<Result<Vec<_>, _>>()?;
+    let tracks = inputs
+        .iter()
+        .zip(analyses)
+        .enumerate()
+        .map(|(index, (input, (analysis, _)))| Track {
+            selection_index: index,
+            title: input.title.clone(),
+            path: input.path.clone(),
+            analysis,
+        })
+        .collect::<Vec<_>>();
+    progress(Progress::Optimizing { total });
     let analyses = tracks
         .iter()
         .map(|t| t.analysis.clone())
