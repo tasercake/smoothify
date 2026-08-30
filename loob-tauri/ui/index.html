@@ -35,6 +35,10 @@
       <h2>Currently active</h2>
       <ul id="active-tasks"></ul>
     </section>
+    <section id="annealing-telemetry" class="annealing-telemetry" hidden aria-labelledby="annealing-telemetry-heading">
+      <h2 id="annealing-telemetry-heading">Annealing telemetry</h2>
+      <pre id="annealing-log" aria-label="Simulated annealing parameters and loss history"></pre>
+    </section>
     <section class="player" aria-label="Playlist player">
       <audio id="audio" preload="metadata"></audio>
       <p class="player-label">Now playing</p>
@@ -53,6 +57,39 @@
     </section>
     <h2 id="results-heading">Optimized order</h2>
     <ol id="results"></ol>
+    <section id="visualization-section" class="visualization" hidden aria-labelledby="visualization-heading">
+      <div class="visualization-heading-row">
+        <div>
+          <p class="visualization-eyebrow">DSP FEATURE SPACE</p>
+          <h2 id="visualization-heading">Playlist trajectories</h2>
+        </div>
+        <div class="color-mode" role="group" aria-label="Visualization color coding">
+          <button id="color-by-track" class="color-mode-button" type="button" aria-pressed="true">By track</button>
+          <button id="color-by-sequence" class="color-mode-button" type="button" aria-pressed="false">By sequence</button>
+        </div>
+      </div>
+      <p id="projection-description" class="hint"></p>
+      <div class="point-window" aria-label="Visible playlist point range">
+        <div class="point-window-heading">
+          <span>Visible points</span>
+          <span id="point-window-count" class="point-window-count" aria-live="polite"></span>
+        </div>
+        <div id="point-window-bar" class="point-window-bar">
+          <div id="point-window-selection" class="point-window-selection" role="button" tabindex="0" aria-label="Move the visible point range"></div>
+          <input id="point-window-start" class="point-window-input" type="range" min="0" max="100" value="0" step="0.1" aria-label="Visible point range start percentage">
+          <input id="point-window-finish" class="point-window-input" type="range" min="0" max="100" value="100" step="0.1" aria-label="Visible point range finish percentage">
+        </div>
+        <div class="point-window-values" aria-hidden="true">
+          <span>Start <output id="point-window-start-value">0%</output></span>
+          <span>Finish <output id="point-window-finish-value">100%</output></span>
+        </div>
+      </div>
+      <div id="visualization-canvas-wrap" class="visualization-canvas-wrap">
+        <canvas id="visualization-canvas" aria-label="Two-dimensional projection of timestamped DSP feature chunks"></canvas>
+        <div id="visualization-tooltip" class="visualization-tooltip" role="tooltip" hidden></div>
+      </div>
+      <div id="visualization-legend" class="visualization-legend" aria-live="polite"></div>
+    </section>
     <section id="skipped-section" hidden>
       <h2>Skipped tracks</h2>
       <ul id="skipped"></ul>

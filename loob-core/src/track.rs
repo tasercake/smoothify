@@ -32,6 +32,13 @@ pub struct TrackAnalysis {
     /// Chronological, overlapping feature windows spanning the entire track.
     /// A valid analysis always contains at least one chunk.
     pub chunks: Vec<DspChunk>,
+    /// Higher-resolution windows nearest the beginning seam. These are kept
+    /// separate from the coarse whole-track trajectory so local derivatives do
+    /// not depend on an end-anchored irregular final hop.
+    pub head_chunks: Vec<DspChunk>,
+    /// Higher-resolution windows nearest the ending seam, ordered
+    /// chronologically and ending exactly at the decoded track duration.
+    pub tail_chunks: Vec<DspChunk>,
     /// Retained independently to preserve the existing whole-track transition term.
     pub whole: DspSummary,
 }
@@ -41,6 +48,8 @@ impl TrackAnalysis {
         if !self.duration_seconds.is_finite()
             || self.duration_seconds <= 0.0
             || self.chunks.is_empty()
+            || self.head_chunks.is_empty()
+            || self.tail_chunks.is_empty()
         {
             return false;
         }
@@ -52,18 +61,28 @@ impl TrackAnalysis {
             return false;
         }
 
-        self.chunks.iter().enumerate().all(|(index, chunk)| {
-            let bounds_are_valid = chunk.start_seconds.is_finite()
-                && chunk.end_seconds.is_finite()
-                && chunk.start_seconds >= 0.0
-                && chunk.end_seconds > chunk.start_seconds
-                && chunk.end_seconds <= self.duration_seconds + tolerance;
-            let follows_previous = index == 0
-                || (chunk.start_seconds > self.chunks[index - 1].start_seconds
-                    && chunk.end_seconds > self.chunks[index - 1].end_seconds);
-            bounds_are_valid && follows_previous
-        })
+        valid_chunks(&self.chunks, self.duration_seconds)
+            && valid_chunks(&self.head_chunks, self.duration_seconds)
+            && valid_chunks(&self.tail_chunks, self.duration_seconds)
+            && self.head_chunks[0].start_seconds.abs() <= tolerance
+            && (self.tail_chunks.last().unwrap().end_seconds - self.duration_seconds).abs()
+                <= tolerance
     }
+}
+
+fn valid_chunks(chunks: &[DspChunk], duration_seconds: f64) -> bool {
+    let tolerance = 1e-6 * duration_seconds.max(1.0);
+    chunks.iter().enumerate().all(|(index, chunk)| {
+        let bounds_are_valid = chunk.start_seconds.is_finite()
+            && chunk.end_seconds.is_finite()
+            && chunk.start_seconds >= 0.0
+            && chunk.end_seconds > chunk.start_seconds
+            && chunk.end_seconds <= duration_seconds + tolerance;
+        let follows_previous = index == 0
+            || (chunk.start_seconds > chunks[index - 1].start_seconds
+                && chunk.end_seconds > chunks[index - 1].end_seconds);
+        bounds_are_valid && follows_previous
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

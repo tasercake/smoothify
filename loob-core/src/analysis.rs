@@ -12,9 +12,14 @@ use symphonia::core::{
     probe::Hint,
 };
 
-pub const ANALYSIS_PIPELINE_VERSION: &str = "dsp-v2-chunks10s-overlap1s-fft2048-hop1024";
-pub const CHUNK_SECONDS: f64 = 10.0;
-pub const CHUNK_OVERLAP_SECONDS: f64 = 1.0;
+pub const ANALYSIS_PIPELINE_VERSION: &str =
+    "dsp-v4-boundary2s-hop1s-span12s-chunks5s-hop3s-fft2048-hop1024";
+pub const CHUNK_SECONDS: f64 = 5.0;
+pub const CHUNK_HOP_SECONDS: f64 = 3.0;
+pub const CHUNK_OVERLAP_SECONDS: f64 = CHUNK_SECONDS - CHUNK_HOP_SECONDS;
+pub const BOUNDARY_WINDOW_SECONDS: f64 = 2.0;
+pub const BOUNDARY_HOP_SECONDS: f64 = 1.0;
+pub const BOUNDARY_SPAN_SECONDS: f64 = 12.0;
 const FFT_SIZE: usize = 2048;
 const BASE_HOP: usize = 1024;
 const MAX_GLOBAL_FRAMES: usize = 4096;
@@ -58,6 +63,22 @@ pub fn analyze_audio_with_hash(path: &Path, content_sha256: &str) -> Result<Trac
             summary: summarize(&samples[range], sample_rate, BASE_HOP),
         })
         .collect();
+    let head_chunks = boundary_sample_ranges(samples.len(), sample_rate, BoundarySide::Head)
+        .into_iter()
+        .map(|range| DspChunk {
+            start_seconds: range.start as f64 / sample_rate as f64,
+            end_seconds: range.end as f64 / sample_rate as f64,
+            summary: summarize(&samples[range], sample_rate, BASE_HOP),
+        })
+        .collect();
+    let tail_chunks = boundary_sample_ranges(samples.len(), sample_rate, BoundarySide::Tail)
+        .into_iter()
+        .map(|range| DspChunk {
+            start_seconds: range.start as f64 / sample_rate as f64,
+            end_seconds: range.end as f64 / sample_rate as f64,
+            summary: summarize(&samples[range], sample_rate, BASE_HOP),
+        })
+        .collect();
 
     Ok(TrackAnalysis {
         pipeline_version: ANALYSIS_PIPELINE_VERSION.into(),
@@ -66,6 +87,8 @@ pub fn analyze_audio_with_hash(path: &Path, content_sha256: &str) -> Result<Trac
         sample_rate,
         duration_seconds,
         chunks,
+        head_chunks,
+        tail_chunks,
         whole: summarize(
             &samples,
             sample_rate,
@@ -74,17 +97,57 @@ pub fn analyze_audio_with_hash(path: &Path, content_sha256: &str) -> Result<Trac
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+enum BoundarySide {
+    Head,
+    Tail,
+}
+
+fn boundary_sample_ranges(
+    sample_count: usize,
+    sample_rate: u32,
+    side: BoundarySide,
+) -> Vec<std::ops::Range<usize>> {
+    debug_assert!(sample_count > 0);
+    debug_assert!(sample_rate > 0);
+    let window =
+        ((BOUNDARY_WINDOW_SECONDS * sample_rate as f64).round() as usize).clamp(1, sample_count);
+    if sample_count <= window {
+        return std::iter::once(0..sample_count).collect();
+    }
+    let hop = ((BOUNDARY_HOP_SECONDS * sample_rate as f64).round() as usize).max(1);
+    let span =
+        ((BOUNDARY_SPAN_SECONDS * sample_rate as f64).round() as usize).clamp(window, sample_count);
+    let max_offset = span - window;
+    let mut offsets = (0..=max_offset).step_by(hop).collect::<Vec<_>>();
+    if offsets.last().copied() != Some(max_offset) {
+        offsets.push(max_offset);
+    }
+    let mut ranges = offsets
+        .into_iter()
+        .map(|offset| match side {
+            BoundarySide::Head => offset..offset + window,
+            BoundarySide::Tail => {
+                let start = sample_count - window - offset;
+                start..start + window
+            }
+        })
+        .collect::<Vec<_>>();
+    ranges.sort_by_key(|range| range.start);
+    ranges.dedup_by_key(|range| range.start);
+    ranges
+}
+
 fn chunk_sample_ranges(sample_count: usize, sample_rate: u32) -> Vec<std::ops::Range<usize>> {
     debug_assert!(sample_count > 0);
     debug_assert!(sample_rate > 0);
     let window_samples = (CHUNK_SECONDS * sample_rate as f64).round() as usize;
-    let hop_samples =
-        ((CHUNK_SECONDS - CHUNK_OVERLAP_SECONDS) * sample_rate as f64).round() as usize;
+    let hop_samples = (CHUNK_HOP_SECONDS * sample_rate as f64).round() as usize;
     let window_samples = window_samples.max(1);
     let hop_samples = hop_samples.max(1);
 
     if sample_count <= window_samples {
-        return vec![0..sample_count];
+        return std::iter::once(0..sample_count).collect();
     }
 
     let final_start = sample_count - window_samples;
@@ -285,28 +348,86 @@ fn summarize(samples: &[f32], sample_rate: u32, hop: usize) -> DspSummary {
 
 #[cfg(test)]
 mod tests {
-    use super::chunk_sample_ranges;
+    use super::{boundary_sample_ranges, chunk_sample_ranges, BoundarySide};
 
     #[test]
     fn short_track_has_one_partial_chunk_covering_the_track() {
-        assert_eq!(chunk_sample_ranges(73, 10), vec![0..73]);
-        assert_eq!(chunk_sample_ranges(100, 10), vec![0..100]);
+        assert_eq!(chunk_sample_ranges(43, 10), vec![0..43]);
+        assert_eq!(chunk_sample_ranges(50, 10), vec![0..50]);
     }
 
     #[test]
-    fn chunks_use_nine_second_hops_and_an_end_anchored_final_window() {
+    fn chunks_use_three_second_hops_and_an_end_anchored_final_window() {
         assert_eq!(
             chunk_sample_ranges(250, 10),
-            vec![0..100, 90..190, 150..250]
+            vec![
+                0..50,
+                30..80,
+                60..110,
+                90..140,
+                120..170,
+                150..200,
+                180..230,
+                200..250,
+            ]
         );
         assert_eq!(
             chunk_sample_ranges(280, 10),
-            vec![0..100, 90..190, 180..280]
+            vec![
+                0..50,
+                30..80,
+                60..110,
+                90..140,
+                120..170,
+                150..200,
+                180..230,
+                210..260,
+                230..280,
+            ]
         );
     }
 
     #[test]
     fn aligned_final_window_is_not_duplicated() {
-        assert_eq!(chunk_sample_ranges(190, 10), vec![0..100, 90..190]);
+        assert_eq!(
+            chunk_sample_ranges(200, 10),
+            vec![0..50, 30..80, 60..110, 90..140, 120..170, 150..200]
+        );
+    }
+
+    #[test]
+    fn boundary_windows_use_a_dense_fixed_cadence_at_both_seams() {
+        assert_eq!(
+            boundary_sample_ranges(250, 10, BoundarySide::Head),
+            vec![
+                0..20,
+                10..30,
+                20..40,
+                30..50,
+                40..60,
+                50..70,
+                60..80,
+                70..90,
+                80..100,
+                90..110,
+                100..120,
+            ]
+        );
+        assert_eq!(
+            boundary_sample_ranges(250, 10, BoundarySide::Tail),
+            vec![
+                130..150,
+                140..160,
+                150..170,
+                160..180,
+                170..190,
+                180..200,
+                190..210,
+                200..220,
+                210..230,
+                220..240,
+                230..250,
+            ]
+        );
     }
 }

@@ -1,6 +1,6 @@
 :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; background: #0d0f12; color: #f6f3ea; }
 body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 80% 0%, #243a35, transparent 35%), #0d0f12; }
-main { max-width: 640px; margin: 0 auto; padding: 72px 32px 96px; }
+main { box-sizing: border-box; width: 100%; max-width: none; margin: 0; padding: 72px clamp(16px, 2vw, 32px) 96px; }
 .eyebrow { letter-spacing: .18em; color: #8be0bd; font-weight: 700; font-size: .75rem; }
 h1 { font: 600 clamp(2.5rem, 8vw, 5rem)/.95 Georgia, serif; margin: 18px 0 24px; }
 .lede { color: #b8bbb7; font-size: 1.05rem; line-height: 1.6; max-width: 56ch; }
@@ -24,11 +24,46 @@ progress { width: 100%; margin-top: 28px; accent-color: #8be0bd; }
 .active-work ul { margin: 0; padding: 0; list-style: none; }
 .active-work li { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; color: #b8bbb7; font-size: .85rem; }
 .task-state { flex: 0 0 auto; color: #8b908d; }
+.annealing-telemetry { margin-top: 12px; padding: 14px 16px; border: 1px solid #2a2e31; border-radius: 12px; background: #0a0d0f; }
+.annealing-telemetry h2 { margin: 0 0 10px; color: #8b908d; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+.annealing-telemetry pre { min-height: 3.5rem; max-height: 320px; margin: 0; overflow: auto; color: #b8bbb7; font: 400 .78rem/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-variant-numeric: tabular-nums; white-space: pre; }
 #results-heading { margin: 32px 0 0; font-size: 1rem; }
 #results { margin-top: 28px; padding-left: 28px; }
 #results li { border-bottom: 1px solid #2a2e31; padding: 12px 8px; }
 .track-button { width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; text-align: left; font: inherit; }
 #results li.active { border-color: #8be0bd; color: #8be0bd; }
+.visualization { margin-top: 40px; }
+.visualization-heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.visualization-eyebrow { margin: 0 0 6px; color: #8be0bd; font-size: .7rem; font-weight: 700; letter-spacing: .14em; }
+.visualization h2 { margin: 0; font-size: 1.15rem; }
+.color-mode { display: flex; flex: 0 0 auto; gap: 6px; padding: 4px; border: 1px solid #2a2e31; border-radius: 999px; background: #111519; }
+.color-mode-button { padding: 7px 11px; border: 0; background: transparent; color: #8b908d; font-size: .75rem; }
+.color-mode-button[aria-pressed="true"] { background: #8be0bd; color: #0d0f12; }
+.point-window { margin-top: 18px; }
+.point-window-heading, .point-window-values { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: .78rem; font-variant-numeric: tabular-nums; }
+.point-window-heading { color: #b8bbb7; font-weight: 700; }
+.point-window-count, .point-window-values { color: #8b908d; font-weight: 400; }
+.point-window-bar { position: relative; height: 32px; margin: 6px 0 2px; touch-action: none; }
+.point-window-bar::before { content: ''; position: absolute; z-index: 0; top: 12px; right: 0; left: 0; height: 8px; border-radius: 999px; background: #252a2c; }
+.point-window-selection { position: absolute; z-index: 1; top: 0; height: 32px; cursor: grab; outline: none; touch-action: none; }
+.point-window-selection::before { content: ''; position: absolute; top: 12px; right: 0; left: 0; height: 8px; background: #477866; }
+.point-window-selection:hover::before, .point-window-selection:focus-visible::before { background: #5b9c83; }
+.point-window-selection:focus-visible { outline: 2px solid #8be0bd; outline-offset: 2px; border-radius: 7px; }
+.point-window-selection.dragging { cursor: grabbing; }
+.point-window-input { position: absolute; z-index: 2; inset: 0; width: 100%; height: 32px; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; appearance: none; pointer-events: none; }
+.point-window-input:focus { z-index: 3; outline: none; }
+.point-window-input::-webkit-slider-runnable-track { height: 8px; background: transparent; }
+.point-window-input::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -6px; border: 2px solid #0d0f12; border-radius: 50%; background: #8be0bd; box-shadow: 0 0 0 1px #8be0bd; appearance: none; pointer-events: auto; cursor: ew-resize; }
+.point-window-input::-moz-range-track { height: 8px; background: transparent; }
+.point-window-input::-moz-range-thumb { width: 16px; height: 16px; border: 2px solid #0d0f12; border-radius: 50%; background: #8be0bd; box-shadow: 0 0 0 1px #8be0bd; pointer-events: auto; cursor: ew-resize; }
+.point-window-input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px #8be0bd, 0 0 0 4px rgba(139, 224, 189, .25); }
+.point-window-input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1px #8be0bd, 0 0 0 4px rgba(139, 224, 189, .25); }
+.visualization-canvas-wrap { position: relative; width: 100%; margin-top: 16px; }
+#visualization-canvas { display: block; width: 100%; border-radius: 12px; background: rgba(13, 15, 18, .7); cursor: crosshair; touch-action: none; }
+.visualization-tooltip { position: absolute; z-index: 2; max-width: min(280px, calc(100% - 24px)); padding: 8px 10px; border: 1px solid #454b4c; border-radius: 8px; background: #15191c; color: #f6f3ea; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); font-size: .78rem; line-height: 1.35; pointer-events: none; }
+.visualization-tooltip strong { display: block; margin-bottom: 2px; }
+.visualization-legend { display: flex; align-items: center; gap: 10px; min-height: 1.25rem; margin-top: 10px; color: #8b908d; font-size: .75rem; }
+.sequence-gradient { display: inline-block; width: 96px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, rgb(68, 1, 84), rgb(33, 145, 140), rgb(253, 231, 37)); }
 .player { margin-top: 28px; padding: 20px; border: 1px solid #2a2e31; border-radius: 18px; background: #15191c; }
 .player-label { margin: 0 0 6px; color: #8b908d; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .player h2 { min-height: 1.3em; margin: 0 0 18px; font-size: 1.15rem; }
@@ -38,4 +73,7 @@ progress { width: 100%; margin-top: 28px; accent-color: #8be0bd; }
 .seek { width: 100%; padding: 0; accent-color: #8be0bd; }
 .seek:disabled { opacity: .35; }
 #playback-status { min-height: 1.3em; margin-top: 12px; }
-@media (max-width: 620px) { .controls, .url-controls { flex-direction: column; } }
+@media (max-width: 620px) {
+  .controls, .url-controls { flex-direction: column; }
+  .visualization-heading-row { align-items: flex-start; flex-direction: column; }
+}

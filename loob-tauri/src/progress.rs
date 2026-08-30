@@ -50,7 +50,7 @@ pub struct OutcomeCounters {
     failed: usize,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "phase", rename_all = "snake_case")]
 pub enum ProgressEvent {
     Validating {
@@ -73,6 +73,28 @@ pub enum ProgressEvent {
     Optimizing {
         total: usize,
     },
+    Annealing {
+        objective: String,
+        seed: u64,
+        report_every: usize,
+        iteration: usize,
+        iterations: usize,
+        temperature: f64,
+        initial_temperature: f64,
+        cooling_rate: f64,
+        current_loss: f64,
+        best_loss: f64,
+        accepted_moves: usize,
+        attempted_moves: usize,
+    },
+    AnnealingSkipped {
+        total: usize,
+        reason: String,
+    },
+    ProjectingFeatures {
+        tracks: usize,
+        chunks: usize,
+    },
     PreparingPlayer {
         total: usize,
     },
@@ -81,7 +103,7 @@ pub enum ProgressEvent {
     },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct AppProgress {
     pub seq: u64,
     #[serde(flatten)]
@@ -280,6 +302,36 @@ impl ProgressReporter {
                 state.work = None;
                 state.work_dirty = false;
                 let _ = send_locked(&mut state, ProgressEvent::Optimizing { total });
+            }
+            Progress::Annealing {
+                objective,
+                seed,
+                report_every,
+                update,
+            } => {
+                let _ = send_locked(
+                    &mut state,
+                    ProgressEvent::Annealing {
+                        objective,
+                        seed,
+                        report_every,
+                        iteration: update.iteration,
+                        iterations: update.iterations,
+                        temperature: update.temperature,
+                        initial_temperature: update.initial_temperature,
+                        cooling_rate: update.cooling_rate,
+                        current_loss: update.current_loss,
+                        best_loss: update.best_loss,
+                        accepted_moves: update.accepted_moves,
+                        attempted_moves: update.attempted_moves,
+                    },
+                );
+            }
+            Progress::AnnealingSkipped { total, reason } => {
+                let _ = send_locked(
+                    &mut state,
+                    ProgressEvent::AnnealingSkipped { total, reason },
+                );
             }
         }
     }

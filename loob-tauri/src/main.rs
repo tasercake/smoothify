@@ -2,8 +2,8 @@ mod media;
 mod progress;
 
 use loob_core::{
-    smooth_audio_inputs, smooth_local_files, AudioInput, Config, FeatureCache, Objective, Progress,
-    SmoothResult,
+    project_summaries, smooth_audio_inputs, smooth_local_files, AudioInput, Config, FeatureCache,
+    Objective, Progress, SmoothResult,
 };
 use loob_yt::{CachePolicy, RealYtDlp, SkippedTrack, YoutubeCache, YoutubeProgress, YtError};
 use media::{MediaRegistry, MediaServer};
@@ -32,11 +32,37 @@ struct PlayableTrack {
     media_url: String,
 }
 
+#[derive(Debug, Serialize, PartialEq)]
+struct VisualizationPoint {
+    chunk_index: usize,
+    start_seconds: f64,
+    end_seconds: f64,
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+struct VisualizationTrack {
+    track_id: usize,
+    sequence_index: usize,
+    title: String,
+    points: Vec<VisualizationPoint>,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+struct PlaylistVisualization {
+    algorithm: String,
+    x_axis_label: String,
+    y_axis_label: String,
+    tracks: Vec<VisualizationTrack>,
+}
+
 #[derive(Debug, Serialize)]
 struct PlayableResult {
     ordered_tracks: Vec<PlayableTrack>,
     bottleneck_cost: f64,
     mean_cost: f64,
+    visualization: PlaylistVisualization,
 }
 
 #[tauri::command]
@@ -102,10 +128,19 @@ async fn order_audio_files(
         }
         let result = result.map_err(|e| e.to_string())?;
         reporter.ensure_delivery()?;
+        reporter.send(ProgressEvent::ProjectingFeatures {
+            tracks: result.ordered_tracks.len(),
+            chunks: result
+                .ordered_tracks
+                .iter()
+                .map(|track| track.analysis.chunks.len())
+                .sum(),
+        })?;
+        let visualization = build_visualization(&result)?;
         reporter.send(ProgressEvent::PreparingPlayer {
             total: result.ordered_tracks.len(),
         })?;
-        let result = register_result(&state.media, result)?;
+        let result = register_result(&state.media, result, visualization)?;
         reporter.send(ProgressEvent::Completed {
             total: result.ordered_tracks.len(),
         })?;
@@ -195,10 +230,19 @@ async fn order_youtube_playlist(
         }
         let result = result.map_err(|error| format!("Could not analyze this playlist: {error}"))?;
         reporter.ensure_delivery()?;
+        reporter.send(ProgressEvent::ProjectingFeatures {
+            tracks: result.ordered_tracks.len(),
+            chunks: result
+                .ordered_tracks
+                .iter()
+                .map(|track| track.analysis.chunks.len())
+                .sum(),
+        })?;
+        let visualization = build_visualization(&result)?;
         reporter.send(ProgressEvent::PreparingPlayer {
             total: result.ordered_tracks.len(),
         })?;
-        let result = register_result(&state.media, result)?;
+        let result = register_result(&state.media, result, visualization)?;
         reporter.send(ProgressEvent::Completed {
             total: result.ordered_tracks.len(),
         })?;
@@ -215,6 +259,7 @@ async fn order_youtube_playlist(
 fn register_result(
     registry: &MediaRegistry,
     result: SmoothResult,
+    visualization: PlaylistVisualization,
 ) -> Result<PlayableResult, String> {
     let paths = result
         .ordered_tracks
@@ -235,6 +280,53 @@ fn register_result(
         ordered_tracks,
         bottleneck_cost: result.bottleneck_cost,
         mean_cost: result.mean_cost,
+        visualization,
+    })
+}
+
+fn build_visualization(result: &SmoothResult) -> Result<PlaylistVisualization, String> {
+    let summaries = result
+        .ordered_tracks
+        .iter()
+        .flat_map(|track| track.analysis.chunks.iter().map(|chunk| &chunk.summary))
+        .collect::<Vec<_>>();
+    let projection = project_summaries(&summaries)
+        .map_err(|error| format!("Could not project DSP features: {error}"))?;
+    let mut coordinates = projection.coordinates.into_iter();
+    let tracks = result
+        .ordered_tracks
+        .iter()
+        .enumerate()
+        .map(|(sequence_index, track)| VisualizationTrack {
+            track_id: track.selection_index,
+            sequence_index,
+            title: track.title.clone(),
+            points: track
+                .analysis
+                .chunks
+                .iter()
+                .enumerate()
+                .map(|(chunk_index, chunk)| {
+                    let [x, y] = coordinates
+                        .next()
+                        .expect("projection must preserve the requested point count");
+                    VisualizationPoint {
+                        chunk_index,
+                        start_seconds: chunk.start_seconds,
+                        end_seconds: chunk.end_seconds,
+                        x,
+                        y,
+                    }
+                })
+                .collect(),
+        })
+        .collect();
+    debug_assert!(coordinates.next().is_none());
+    Ok(PlaylistVisualization {
+        algorithm: projection.algorithm.to_string(),
+        x_axis_label: "MDS 1".into(),
+        y_axis_label: "MDS 2".into(),
+        tracks,
     })
 }
 
@@ -283,4 +375,90 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run loob");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use loob_core::{DspChunk, DspSummary, Track, TrackAnalysis, FEATURE_PROJECTION_ALGORITHM};
+
+    fn summary(value: f64) -> DspSummary {
+        let mut chroma = [0.0; 12];
+        chroma[value as usize % 12] = 1.0;
+        DspSummary {
+            rms_db: -40.0 + value,
+            spectral_centroid: value / 10.0,
+            spectral_rolloff: value / 10.0,
+            spectral_flatness: value / 10.0,
+            spectral_flux: value / 10.0,
+            zero_crossing_rate: value / 10.0,
+            onset_density: value,
+            chroma,
+        }
+    }
+
+    fn track(selection_index: usize, title: &str, offset: f64) -> Track {
+        Track {
+            selection_index,
+            title: title.into(),
+            path: PathBuf::from(format!("{title}.wav")),
+            analysis: TrackAnalysis {
+                pipeline_version: "test".into(),
+                analysis_fingerprint: "test".into(),
+                content_sha256: format!("hash-{selection_index}"),
+                sample_rate: 48_000,
+                duration_seconds: 19.0,
+                chunks: vec![
+                    DspChunk {
+                        start_seconds: 0.0,
+                        end_seconds: 10.0,
+                        summary: summary(offset),
+                    },
+                    DspChunk {
+                        start_seconds: 9.0,
+                        end_seconds: 19.0,
+                        summary: summary(offset + 1.0),
+                    },
+                ],
+                head_chunks: vec![DspChunk {
+                    start_seconds: 0.0,
+                    end_seconds: 2.0,
+                    summary: summary(offset),
+                }],
+                tail_chunks: vec![DspChunk {
+                    start_seconds: 17.0,
+                    end_seconds: 19.0,
+                    summary: summary(offset + 1.0),
+                }],
+                whole: summary(offset + 0.5),
+            },
+        }
+    }
+
+    #[test]
+    fn visualization_preserves_optimized_track_and_chunk_identity() {
+        let result = SmoothResult {
+            ordered_tracks: vec![track(7, "Second", 3.0), track(2, "First", 6.0)],
+            bottleneck_cost: 0.2,
+            mean_cost: 0.1,
+            distance_matrix: vec![vec![0.0, 0.2], vec![0.3, 0.0]],
+        };
+        let visualization = build_visualization(&result).unwrap();
+
+        assert_eq!(visualization.algorithm, FEATURE_PROJECTION_ALGORITHM);
+        assert_eq!(visualization.tracks.len(), 2);
+        assert_eq!(visualization.tracks[0].track_id, 7);
+        assert_eq!(visualization.tracks[0].sequence_index, 0);
+        assert_eq!(visualization.tracks[1].track_id, 2);
+        assert_eq!(visualization.tracks[1].sequence_index, 1);
+        assert_eq!(visualization.tracks[0].points[1].chunk_index, 1);
+        assert_eq!(visualization.tracks[0].points[1].start_seconds, 9.0);
+        assert_eq!(visualization.tracks[0].points[1].end_seconds, 19.0);
+        assert!(visualization
+            .tracks
+            .iter()
+            .flat_map(|track| &track.points)
+            .flat_map(|point| [point.x, point.y])
+            .all(f64::is_finite));
+    }
 }

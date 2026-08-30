@@ -28,25 +28,35 @@ fn summary(value: f64, pitch: usize) -> DspSummary {
 }
 
 fn analysis(hash: &str, intro: f64, outro: f64, pitch: usize) -> TrackAnalysis {
+    let chunks = vec![
+        DspChunk {
+            start_seconds: 0.0,
+            end_seconds: 0.5,
+            summary: summary(intro, pitch),
+        },
+        DspChunk {
+            start_seconds: 0.5,
+            end_seconds: 1.0,
+            summary: summary(outro, pitch),
+        },
+    ];
     TrackAnalysis {
         pipeline_version: ANALYSIS_PIPELINE_VERSION.into(),
         analysis_fingerprint: analysis_fingerprint(),
         content_sha256: hash.into(),
         sample_rate: 8_000,
         duration_seconds: 1.0,
-        chunks: vec![
-            DspChunk {
-                start_seconds: 0.0,
-                end_seconds: 0.5,
-                summary: summary(intro, pitch),
-            },
-            DspChunk {
-                start_seconds: 0.5,
-                end_seconds: 1.0,
-                summary: summary(outro, pitch),
-            },
-        ],
+        chunks: chunks.clone(),
+        head_chunks: chunks.clone(),
+        tail_chunks: chunks,
         whole: summary((intro + outro) / 2.0, pitch),
+    }
+}
+
+fn boundary_only_config() -> Config {
+    Config {
+        whole_track_weight: 0.0,
+        ..Config::default()
     }
 }
 
@@ -54,55 +64,51 @@ fn analysis(hash: &str, intro: f64, outro: f64, pitch: usize) -> TrackAnalysis {
 fn transition_cost_is_directed() {
     let a = analysis("a", 0.0, 0.9, 0);
     let b = analysis("b", 0.9, 0.1, 0);
-    assert!(directed_transition_cost(&a, &b, 0.0) < directed_transition_cost(&b, &a, 0.0));
+    let config = boundary_only_config();
+    assert!(
+        directed_transition_cost(&a, &b, &config).unwrap()
+            < directed_transition_cost(&b, &a, &config).unwrap()
+    );
 }
 
 #[test]
 fn zero_chroma_vectors_match_each_other_but_not_nonzero_chroma() {
     let mut a = analysis("a", 0.2, 0.2, 0);
     let mut b = analysis("b", 0.2, 0.2, 0);
-    a.chunks.last_mut().unwrap().summary.chroma = [0.0; 12];
-    b.chunks.first_mut().unwrap().summary.chroma = [0.0; 12];
-    assert_eq!(directed_transition_cost(&a, &b, 0.0), 0.0);
-    b.chunks.first_mut().unwrap().summary.chroma[0] = 1.0;
-    assert!(directed_transition_cost(&a, &b, 0.0) > 0.0);
+    for chunk in &mut a.tail_chunks {
+        chunk.summary.chroma = [0.0; 12];
+    }
+    for chunk in &mut b.head_chunks {
+        chunk.summary.chroma = [0.0; 12];
+    }
+    let config = boundary_only_config();
+    assert!(directed_transition_cost(&a, &b, &config).unwrap() < 1.0e-20);
+    for chunk in &mut b.head_chunks {
+        chunk.summary.chroma[0] = 1.0;
+    }
+    assert!(directed_transition_cost(&a, &b, &config).unwrap() > 0.0);
 }
 
 #[test]
-fn endpoint_cost_uses_only_last_source_and_first_destination_chunks() {
-    let mut a = analysis("a", 0.0, 0.25, 0);
-    let mut b = analysis("b", 0.25, 0.9, 0);
-    let baseline = directed_transition_cost(&a, &b, 0.0);
-
-    a.chunks.insert(
-        1,
-        DspChunk {
-            start_seconds: 0.25,
-            end_seconds: 0.5,
-            summary: summary(1.0, 6),
-        },
-    );
-    b.chunks.insert(
-        1,
-        DspChunk {
-            start_seconds: 0.25,
-            end_seconds: 0.5,
-            summary: summary(1.0, 6),
-        },
-    );
-    assert_eq!(directed_transition_cost(&a, &b, 0.0), baseline);
-
-    a.chunks.last_mut().unwrap().summary = summary(0.95, 6);
-    assert_ne!(directed_transition_cost(&a, &b, 0.0), baseline);
-}
-
-#[test]
-#[should_panic(expected = "source track has no DSP chunks")]
-fn endpoint_cost_rejects_an_analysis_without_chunks() {
+fn endpoint_cost_uses_dense_boundary_chunks_not_coarse_chunks() {
     let mut a = analysis("a", 0.0, 0.25, 0);
     let b = analysis("b", 0.25, 0.9, 0);
-    a.chunks.clear();
-    let _ = directed_transition_cost(&a, &b, 0.0);
+    let config = boundary_only_config();
+    let baseline = directed_transition_cost(&a, &b, &config).unwrap();
+
+    a.chunks.last_mut().unwrap().summary = summary(1.0, 6);
+    assert_eq!(directed_transition_cost(&a, &b, &config).unwrap(), baseline);
+
+    a.tail_chunks.last_mut().unwrap().summary = summary(0.95, 6);
+    assert_ne!(directed_transition_cost(&a, &b, &config).unwrap(), baseline);
+}
+
+#[test]
+fn endpoint_cost_rejects_an_analysis_without_boundary_chunks() {
+    let mut a = analysis("a", 0.0, 0.25, 0);
+    let b = analysis("b", 0.25, 0.9, 0);
+    a.tail_chunks.clear();
+    assert!(directed_transition_cost(&a, &b, &boundary_only_config()).is_err());
 }
 
 #[test]
@@ -116,7 +122,41 @@ fn analyzed_chunks_store_exact_timeline_windows() {
         .iter()
         .map(|chunk| (chunk.start_seconds, chunk.end_seconds))
         .collect::<Vec<_>>();
-    assert_eq!(windows, vec![(0.0, 10.0), (9.0, 19.0), (15.0, 25.0)]);
+    assert_eq!(
+        windows,
+        vec![
+            (0.0, 5.0),
+            (3.0, 8.0),
+            (6.0, 11.0),
+            (9.0, 14.0),
+            (12.0, 17.0),
+            (15.0, 20.0),
+            (18.0, 23.0),
+            (20.0, 25.0),
+        ]
+    );
+    let head_windows = result
+        .head_chunks
+        .iter()
+        .map(|chunk| (chunk.start_seconds, chunk.end_seconds))
+        .collect::<Vec<_>>();
+    let tail_windows = result
+        .tail_chunks
+        .iter()
+        .map(|chunk| (chunk.start_seconds, chunk.end_seconds))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        head_windows,
+        (0..=10)
+            .map(|start| (start as f64, start as f64 + 2.0))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        tail_windows,
+        (13..=23)
+            .map(|start| (start as f64, start as f64 + 2.0))
+            .collect::<Vec<_>>()
+    );
     assert_eq!(result.duration_seconds, 25.0);
 }
 

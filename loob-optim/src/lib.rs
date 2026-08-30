@@ -2,7 +2,7 @@ mod greedy_nn;
 mod sa;
 
 pub use greedy_nn::GreedyNn;
-pub use sa::{AnnealingObjective, SimulatedAnnealing};
+pub use sa::{AnnealingObjective, AnnealingProgress, SimulatedAnnealing};
 
 use thiserror::Error;
 
@@ -63,4 +63,57 @@ pub fn mean_cost(dist: &DistanceMatrix, order: &[usize]) -> f64 {
         return 0.0;
     }
     total_cost(dist, order) / (n - 1) as f64
+}
+
+/// Use the median positive off-diagonal transition as a scale-aware starting
+/// temperature. This keeps annealing behavior stable when the metric's units
+/// or weights change.
+pub fn characteristic_edge_cost(dist: &DistanceMatrix) -> Result<f64, OptimError> {
+    let n = validate_matrix(dist)?;
+    let mut edges = Vec::with_capacity(n.saturating_mul(n.saturating_sub(1)));
+    for (row, values) in dist.iter().enumerate() {
+        for (column, value) in values.iter().enumerate() {
+            if row != column && *value > 0.0 {
+                edges.push(*value);
+            }
+        }
+    }
+    if edges.is_empty() {
+        return Ok(1.0);
+    }
+    edges.sort_by(f64::total_cmp);
+    let middle = edges.len() / 2;
+    let median = if edges.len() % 2 == 0 {
+        (edges[middle - 1] + edges[middle]) * 0.5
+    } else {
+        edges[middle]
+    };
+    Ok(median.max(1.0e-9))
+}
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn characteristic_cost_scales_with_the_matrix() {
+        let matrix = vec![
+            vec![0.0, 1.0, 3.0],
+            vec![2.0, 0.0, 4.0],
+            vec![5.0, 6.0, 0.0],
+        ];
+        let scaled = matrix
+            .iter()
+            .map(|row| row.iter().map(|value| value * 10.0).collect())
+            .collect::<Vec<Vec<f64>>>();
+        assert_eq!(
+            characteristic_edge_cost(&scaled).unwrap(),
+            10.0 * characteristic_edge_cost(&matrix).unwrap()
+        );
+    }
+
+    #[test]
+    fn all_zero_matrix_has_a_safe_temperature() {
+        assert_eq!(characteristic_edge_cost(&vec![vec![0.0]]).unwrap(), 1.0);
+    }
 }

@@ -2,7 +2,8 @@ use crate::{
     distance_matrix, CacheStatus, Config, FeatureCache, LoobError, Objective, SmoothResult, Track,
 };
 use loob_optim::{
-    bottleneck_cost, mean_cost, AnnealingObjective, GreedyNn, Optimizer, SimulatedAnnealing,
+    bottleneck_cost, characteristic_edge_cost, mean_cost, AnnealingObjective, AnnealingProgress,
+    GreedyNn, Optimizer, SimulatedAnnealing,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -47,6 +48,16 @@ pub enum Progress {
     },
     Optimizing {
         total: usize,
+    },
+    Annealing {
+        objective: String,
+        seed: u64,
+        report_every: usize,
+        update: AnnealingProgress,
+    },
+    AnnealingSkipped {
+        total: usize,
+        reason: String,
     },
 }
 
@@ -161,24 +172,41 @@ pub fn smooth_audio_inputs(
         .iter()
         .map(|t| t.analysis.clone())
         .collect::<Vec<_>>();
-    let matrix = distance_matrix(&analyses, config.whole_track_weight);
+    let matrix = distance_matrix(&analyses, config).map_err(LoobError::Metric)?;
     let order = if tracks.len() == 1 {
+        progress(Progress::AnnealingSkipped {
+            total,
+            reason: "one usable track requires no path search".into(),
+        });
         vec![0]
     } else {
         let greedy = GreedyNn.optimize(&matrix)?;
-        let objective = match config.objective {
-            Objective::Bottleneck => AnnealingObjective::Bottleneck,
-            Objective::Hybrid { bottleneck_weight } => AnnealingObjective::Hybrid {
-                beta: bottleneck_weight,
-            },
+        let (objective, objective_label) = match &config.objective {
+            Objective::Bottleneck => (AnnealingObjective::Bottleneck, "bottleneck".to_string()),
+            Objective::Hybrid { bottleneck_weight } => (
+                AnnealingObjective::Hybrid {
+                    beta: *bottleneck_weight,
+                },
+                format!("hybrid(beta={bottleneck_weight:.6})"),
+            ),
         };
+        let initial_temperature = characteristic_edge_cost(&matrix)?;
+        let report_every = (config.iterations / 200).max(1);
         SimulatedAnnealing {
             objective,
             iterations: config.iterations,
             seed: Some(config.seed),
+            initial_temp: initial_temperature,
             ..Default::default()
         }
-        .optimize_from(&matrix, greedy)?
+        .optimize_from_with_progress(&matrix, greedy, report_every, |update| {
+            progress(Progress::Annealing {
+                objective: objective_label.clone(),
+                seed: config.seed,
+                report_every,
+                update,
+            });
+        })?
     };
     let ordered_tracks = order.iter().map(|index| tracks[*index].clone()).collect();
     Ok(SmoothResult {
